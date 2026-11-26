@@ -416,7 +416,7 @@ export function InteractivePreview() {
     <section
       id="preview"
       aria-labelledby="preview-heading"
-      className="relative mx-auto max-w-6xl px-4 pb-28 pt-4 sm:px-6 sm:pb-36"
+      className="relative mx-auto max-w-6xl scroll-mt-28 px-4 pb-28 pt-4 sm:px-6 sm:pb-36"
     >
       <h2 id="preview-heading" className="sr-only">
         Interactive ORBIT Workspace Preview
@@ -476,7 +476,7 @@ export function InteractivePreview() {
                 <div
                   role="tablist"
                   aria-label="ORBIT workspace modules"
-                  className="flex gap-1.5 overflow-x-auto md:flex-col"
+                  className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 md:flex md:flex-col"
                 >
                   {navItems.map((item) => {
                     const selected = activeTab === item.id;
@@ -487,23 +487,23 @@ export function InteractivePreview() {
                         role="tab"
                         aria-selected={selected}
                         onClick={() => setActiveTab(item.id)}
-                        className={`flex shrink-0 cursor-pointer items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors ${
+                        className={`flex min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors ${
                           selected
                             ? "border border-sky-400/30 bg-sky-400/10 text-slate-50"
                             : "border border-transparent text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
                         }`}
                       >
-                        <span className="flex items-center gap-2">
+                        <span className="flex min-w-0 items-center gap-2">
                           <span
-                            className={
+                            className={`shrink-0 ${
                               selected ? "text-sky-400" : "text-slate-500"
-                            }
+                            }`}
                           >
                             {item.icon}
                           </span>
-                          <span>{item.label}</span>
+                          <span className="truncate">{item.label}</span>
                         </span>
-                        <kbd className="hidden font-mono text-[11px] text-slate-500 md:inline">
+                        <kbd className="hidden shrink-0 font-mono text-[11px] text-slate-500 md:inline">
                           {item.shortcut}
                         </kbd>
                       </button>
@@ -513,7 +513,7 @@ export function InteractivePreview() {
               </aside>
 
               {/* Main Interactive Stage */}
-              <div className="min-h-[430px] p-5 pb-10 sm:p-7 sm:pb-12">
+              <div className="min-h-[420px] min-w-0 p-4 sm:p-6">
                 {/* 1. Daily Expenses (₹) */}
                 {activeTab === "expenses" && (
                   <div className="space-y-5">
@@ -580,7 +580,7 @@ export function InteractivePreview() {
                     {/* Quick-Add Expense Bar */}
                     <form
                       onSubmit={handleAddExpense}
-                      className="flex flex-col gap-2 rounded-xl border border-white/[0.09] bg-white/[0.025] p-2.5 sm:flex-row sm:items-center"
+                      className="flex flex-col gap-2 rounded-xl border border-white/[0.09] bg-white/[0.025] p-2.5 sm:flex-row sm:flex-wrap sm:items-center"
                     >
                       <input
                         type="text"
@@ -588,7 +588,7 @@ export function InteractivePreview() {
                         onChange={(e) => setNewTitle(e.target.value)}
                         placeholder="Expense title (e.g. Filter Coffee)"
                         aria-label="Expense title"
-                        className="flex-1 rounded-lg bg-white/[0.04] px-3 py-2 text-xs text-slate-100 placeholder-slate-500 outline-none focus:ring-1 focus:ring-sky-400/60"
+                        className="min-w-0 flex-1 rounded-lg bg-white/[0.04] px-3 py-2 text-xs text-slate-100 placeholder-slate-500 outline-none focus:ring-1 focus:ring-sky-400/60"
                       />
                       <input
                         type="number"
@@ -598,7 +598,7 @@ export function InteractivePreview() {
                         onChange={(e) => setNewAmount(e.target.value)}
                         placeholder="₹ Amount"
                         aria-label="Expense amount in rupees"
-                        className="w-full rounded-lg bg-white/[0.04] px-3 py-2 font-mono text-xs text-slate-100 placeholder-slate-500 outline-none focus:ring-1 focus:ring-sky-400/60 sm:w-28"
+                        className="w-full min-w-0 rounded-lg bg-white/[0.04] px-3 py-2 font-mono text-xs text-slate-100 placeholder-slate-500 outline-none focus:ring-1 focus:ring-sky-400/60 sm:w-28"
                       />
                       {previewPaise !== null && (
                         <span className="shrink-0 rounded-md border border-amber-400/25 bg-amber-400/10 px-2.5 py-1.5 font-mono text-[11px] text-amber-300">
@@ -873,77 +873,74 @@ export function InteractivePreview() {
               </div>
             </div>
 
-            {/* 1-Line SQLite Query Ticker + Persistent Command Status */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] bg-white/[0.02] px-4 py-2.5 font-mono text-[11px]">
-              <div className="min-w-0 truncate text-slate-400">
-                <span className="mr-2 text-sky-400">sqlite&gt;</span>
-                <span>{sqlLog}</span>
-              </div>
-              {cmdFeedback && (
-                <div role="status" className="shrink-0 text-emerald-400">
-                  ✓ {cmdFeedback}
+            {/* Unified Non-Overlapping Desktop Status Dock */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] bg-[#070a12]/90 px-4 py-2.5 font-mono text-[11px]">
+              {/* Left: Live sqlite> WAL query ticker + command feedback */}
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+                <div className="min-w-0 truncate text-slate-400">
+                  <span className="mr-2 text-sky-400">sqlite&gt;</span>
+                  <span>{sqlLog}</span>
                 </div>
-              )}
-            </div>
-          </div>
+                {cmdFeedback && (
+                  <div role="status" className="shrink-0 text-emerald-400">
+                    ✓ {cmdFeedback}
+                  </div>
+                )}
+              </div>
 
-          {/* Overlapping Quick Keyboard Chord Bar */}
-          <div className="pointer-events-auto relative -mt-4 flex justify-center px-4">
-            <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-white/[0.12] bg-[#0e1422]/95 px-4 py-1.5 font-mono text-[11px] text-slate-300 shadow-xl shadow-black/70 backdrop-blur-xl">
-              {gArmed ? (
-                <span className="text-sky-300">
-                  Chord armed: press <kbd className="text-white">e</kbd>,{" "}
-                  <kbd className="text-white">i</kbd>, or{" "}
-                  <kbd className="text-white">h</kbd>
-                </span>
-              ) : (
-                <>
-                  <span className="text-slate-500">Press</span>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("expenses")}
-                    className="cursor-pointer hover:text-white"
-                  >
-                    <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
-                      g+e
-                    </kbd>{" "}
-                    Expenses
-                  </button>
-                  <span className="text-slate-600">·</span>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("inbox")}
-                    className="cursor-pointer hover:text-white"
-                  >
-                    <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
-                      g+i
-                    </kbd>{" "}
-                    Inbox
-                  </button>
-                  <span className="text-slate-600">·</span>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("habits")}
-                    className="cursor-pointer hover:text-white"
-                  >
-                    <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
-                      g+h
-                    </kbd>{" "}
-                    Habits
-                  </button>
-                  <span className="text-slate-600">·</span>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("command")}
-                    className="cursor-pointer hover:text-white"
-                  >
-                    <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
-                      ⌘K
-                    </kbd>{" "}
-                    Palette
-                  </button>
-                </>
-              )}
+              {/* Right: Interactive clickable keyboard chord buttons */}
+              <div className="flex flex-wrap items-center gap-2 text-slate-400">
+                {gArmed ? (
+                  <span className="text-sky-300">
+                    Chord armed: press <kbd className="text-white">e</kbd>,{" "}
+                    <kbd className="text-white">i</kbd>, or{" "}
+                    <kbd className="text-white">h</kbd>
+                  </span>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("expenses")}
+                      className="inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-white/[0.06] hover:text-white"
+                    >
+                      <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
+                        g+e
+                      </kbd>
+                      <span>Expenses</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("inbox")}
+                      className="inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-white/[0.06] hover:text-white"
+                    >
+                      <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
+                        g+i
+                      </kbd>
+                      <span>Inbox</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("habits")}
+                      className="inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-white/[0.06] hover:text-white"
+                    >
+                      <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
+                        g+h
+                      </kbd>
+                      <span>Habits</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("command")}
+                      className="inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-white/[0.06] hover:text-white"
+                    >
+                      <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
+                        ⌘K
+                      </kbd>
+                      <span>Palette</span>
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

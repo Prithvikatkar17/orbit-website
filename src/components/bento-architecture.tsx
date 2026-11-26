@@ -28,7 +28,7 @@ export function BentoArchitecture() {
     <section
       id="architecture"
       aria-labelledby="architecture-heading"
-      className="border-t border-white/[0.07]"
+      className="scroll-mt-28 border-t border-white/[0.07]"
     >
       <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6 sm:py-32">
         {/* Left-Aligned 2-Column Editorial Split Header */}

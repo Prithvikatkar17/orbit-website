@@ -115,7 +115,7 @@ export function FeaturesOverview() {
     <section
       id="features"
       aria-labelledby="features-heading"
-      className="border-t border-white/[0.07]"
+      className="scroll-mt-28 border-t border-white/[0.07]"
     >
       <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6 sm:py-32">
         {/* Left-Aligned 2-Column Editorial Split Header */}
@@ -151,10 +151,10 @@ export function FeaturesOverview() {
           <ScrollReveal delayMs={0} className="lg:col-span-2">
             <article
               onMouseMove={handleSpotlightMove}
-              className="spotlight-card flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/[0.18]"
+              className="spotlight-card flex h-full flex-col justify-between gap-5 overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/[0.18]"
             >
-              {/* Top 65% Cropped UI Mini-Canvas */}
-              <div className="bento-canvas-fade mb-5 rounded-xl border border-white/[0.08] bg-[#0b0f19] p-4">
+              {/* Top Visual Stage */}
+              <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-[#060911]/80 p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <span className="font-mono text-[11px] text-slate-400">
                     LEDGER · INTEGER PAISE
@@ -211,14 +211,14 @@ export function FeaturesOverview() {
           <ScrollReveal delayMs={60}>
             <article
               onMouseMove={handleSpotlightMove}
-              className="spotlight-card flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/[0.18]"
+              className="spotlight-card flex h-full flex-col justify-between gap-5 overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/[0.18]"
             >
-              <div className="bento-canvas-fade mb-5 space-y-2 rounded-xl border border-white/[0.08] bg-[#0b0f19] p-3.5">
+              <div className="space-y-2 overflow-hidden rounded-xl border border-white/[0.07] bg-[#060911]/80 p-4">
                 <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-2.5">
                   <div className="truncate text-xs font-medium text-slate-200">
                     Submit DBMS assignment PDF
                   </div>
-                  <div className="mt-2 flex gap-1.5 font-mono text-[10px]">
+                  <div className="mt-2 flex flex-wrap gap-1.5 font-mono text-[10px]">
                     <span className="rounded border border-sky-400/30 bg-sky-400/10 px-1.5 py-0.5 text-sky-300">
                       [T] Task
                     </span>
@@ -230,7 +230,7 @@ export function FeaturesOverview() {
                     </span>
                   </div>
                 </div>
-                <div className="rounded-lg border border-white/[0.05] bg-white/[0.015] p-2.5 text-xs text-slate-500">
+                <div className="bento-canvas-fade rounded-lg border border-white/[0.05] bg-white/[0.015] p-2.5 text-xs text-slate-500">
                   Read SQLite WAL internals...
                 </div>
               </div>
@@ -251,20 +251,20 @@ export function FeaturesOverview() {
           <ScrollReveal delayMs={100}>
             <article
               onMouseMove={handleSpotlightMove}
-              className="spotlight-card flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/[0.18]"
+              className="spotlight-card flex h-full flex-col justify-between gap-5 overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/[0.18]"
             >
-              <div className="bento-canvas-fade mb-5 space-y-2 rounded-xl border border-white/[0.08] bg-[#0b0f19] p-3.5">
-                <div className="flex items-center justify-between rounded-lg border border-sky-400/30 bg-sky-400/10 px-3 py-2 text-xs">
-                  <span className="font-medium text-slate-100">
+              <div className="space-y-2 overflow-hidden rounded-xl border border-white/[0.07] bg-[#060911]/80 p-4">
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-sky-400/30 bg-sky-400/10 px-3 py-2 text-xs">
+                  <span className="truncate font-medium text-slate-100">
                     Ship static Cloudflare build
                   </span>
-                  <kbd className="rounded border border-white/[0.12] bg-black/30 px-1.5 py-0.5 font-mono text-[10px] text-sky-300">
+                  <kbd className="shrink-0 rounded border border-white/[0.12] bg-black/30 px-1.5 py-0.5 font-mono text-[10px] text-sky-300">
                     ⌘Enter
                   </kbd>
                 </div>
-                <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-xs text-slate-400">
-                  <span>Write WAL backup script</span>
-                  <span className="font-mono text-[10px] text-slate-500">
+                <div className="bento-canvas-fade flex items-center justify-between gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-xs text-slate-400">
+                  <span className="truncate">Write WAL backup script</span>
+                  <span className="shrink-0 font-mono text-[10px] text-slate-500">
                     P1
                   </span>
                 </div>
@@ -286,14 +286,14 @@ export function FeaturesOverview() {
           <ScrollReveal delayMs={140}>
             <article
               onMouseMove={handleSpotlightMove}
-              className="spotlight-card flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/[0.18]"
+              className="spotlight-card flex h-full flex-col justify-between gap-5 overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/[0.18]"
             >
-              <div className="bento-canvas-fade mb-5 space-y-2 rounded-xl border border-white/[0.08] bg-[#0b0f19] p-3.5 font-mono text-xs">
+              <div className="space-y-2 overflow-hidden rounded-xl border border-white/[0.07] bg-[#060911]/80 p-4 font-mono text-xs">
                 <div className="flex items-center gap-2.5 rounded-lg border border-sky-400/25 bg-sky-400/10 px-3 py-2 text-sky-200">
                   <span className="text-sky-400">09:00</span>
                   <span>— Deep Work</span>
                 </div>
-                <div className="flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-slate-400">
+                <div className="bento-canvas-fade flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-slate-400">
                   <span className="text-slate-500">14:30</span>
                   <span>— Systems Lab</span>
                 </div>
@@ -313,16 +313,16 @@ export function FeaturesOverview() {
           <ScrollReveal delayMs={180}>
             <article
               onMouseMove={handleSpotlightMove}
-              className="spotlight-card flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/[0.18]"
+              className="spotlight-card flex h-full flex-col justify-between gap-5 overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/[0.18]"
             >
-              <div className="bento-canvas-fade mb-5 rounded-xl border border-white/[0.08] bg-[#0b0f19] p-3.5 font-mono text-[11px] leading-relaxed">
+              <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-[#060911]/80 p-4 font-mono text-[11px] leading-relaxed">
                 <div className="font-semibold text-slate-200">
                   # SQLite WAL Internals
                 </div>
                 <div className="mt-1 text-slate-400">
                   PRAGMA journal_mode = WAL;
                 </div>
-                <div className="text-slate-500">
+                <div className="bento-canvas-fade text-slate-500">
                   Concurrent readers never block writers.
                 </div>
               </div>
@@ -345,7 +345,7 @@ export function FeaturesOverview() {
               onMouseMove={handleSpotlightMove}
               className="spotlight-card flex h-full flex-col justify-between gap-5 rounded-2xl border border-white/[0.09] bg-white/[0.025] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/[0.18]"
             >
-              <div className="space-y-4">
+              <div className="space-y-4 overflow-hidden rounded-xl border border-white/[0.07] bg-[#060911]/80 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <span className="font-mono text-[11px] text-slate-400">
                     LIVE_THEME_PREVIEW · {selectedTheme.name.toUpperCase()}
@@ -447,9 +447,9 @@ export function FeaturesOverview() {
           <ScrollReveal delayMs={260}>
             <article
               onMouseMove={handleSpotlightMove}
-              className="spotlight-card flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/[0.18]"
+              className="spotlight-card flex h-full flex-col justify-between gap-5 overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.025] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/[0.18]"
             >
-              <div className="mb-5 rounded-xl border border-white/[0.08] bg-[#0b0f19] p-4">
+              <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-[#060911]/80 p-4">
                 <div className="mb-2.5 flex items-center justify-between font-mono text-[10px] text-slate-400">
                   <span>CLICK CELLS TO TOGGLE</span>
                   <span className="text-emerald-400">

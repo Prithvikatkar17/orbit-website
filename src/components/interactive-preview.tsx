@@ -13,20 +13,15 @@ import {
   Sparkles,
   Plus,
   Trash2,
-  Database,
-  ChevronDown,
-  ChevronRight,
 } from "lucide-react";
-import { CrosshairCorners, SectionHeader } from "./section-header";
-import { PreviewTab, useWorkspace } from "./workspace-context";
 
+type PreviewTab = "expenses" | "inbox" | "habits" | "command";
 type PaymentMode = "All" | "UPI" | "Cash" | "Card";
-type ExpenseCategory = "Food" | "Travel" | "Hostel/Bills" | "Study";
 
 interface ExpenseItem {
   id: string;
   title: string;
-  category: ExpenseCategory;
+  category: string;
   mode: Exclude<PaymentMode, "All">;
   paise: number;
   time: string;
@@ -65,21 +60,6 @@ const INITIAL_EXPENSES: ExpenseItem[] = [
     paise: 14500,
     time: "Yesterday",
   },
-  {
-    id: "e5",
-    title: "Fresh Fruit & Midnight Maggi",
-    category: "Food",
-    mode: "UPI",
-    paise: 15000,
-    time: "2 days ago",
-  },
-];
-
-const CATEGORIES: ExpenseCategory[] = [
-  "Food",
-  "Travel",
-  "Hostel/Bills",
-  "Study",
 ];
 
 function formatINR(paise: number): string {
@@ -126,9 +106,8 @@ const INITIAL_INBOX: InboxItem[] = [
   },
 ];
 
-// Deterministic 12x7 (84 days) initial habit pattern
 const INITIAL_HABIT_GRID: boolean[] = Array.from({ length: 84 }, (_, idx) => {
-  if (idx >= 77) return true; // active 7-day streak at the end
+  if (idx >= 77) return true;
   return (idx * 7 + (idx % 5)) % 3 !== 0;
 });
 
@@ -185,32 +164,28 @@ const PALETTE_COMMANDS: PaletteCommand[] = [
 ];
 
 export function InteractivePreview() {
-  const { activeTab, setActiveTab, commandInputRef, setLastChord } =
-    useWorkspace();
+  const [activeTab, setActiveTab] = useState<PreviewTab>("expenses");
 
-  // Tab 1: Expenses state
+  // Expenses
   const [expenses, setExpenses] = useState<ExpenseItem[]>(INITIAL_EXPENSES);
   const [paymentFilter, setPaymentFilter] = useState<PaymentMode>("All");
   const [newTitle, setNewTitle] = useState("Filter Coffee");
   const [newAmount, setNewAmount] = useState("45.50");
-  const [newCategory, setNewCategory] = useState<ExpenseCategory>("Food");
-  const [newMode, setNewMode] = useState<Exclude<PaymentMode, "All">>("UPI");
 
-  // Tab 2: Inbox state
+  // Inbox
   const [inboxItems, setInboxItems] = useState<InboxItem[]>(INITIAL_INBOX);
   const [triageBanner, setTriageBanner] = useState<string | null>(null);
 
-  // Tab 3: Habit heatmap state
+  // Habits
   const [habitCells, setHabitCells] = useState<boolean[]>(INITIAL_HABIT_GRID);
 
-  // Tab 4: Command palette state
+  // Command palette
   const [cmdQuery, setCmdQuery] = useState("");
   const [cmdFeedback, setCmdFeedback] = useState<string | null>(null);
 
-  // Live SQLite WAL query log drawer
-  const [sqlDrawerOpen, setSqlDrawerOpen] = useState(true);
+  // Minimal 1-line SQLite ticker
   const [sqlLog, setSqlLog] = useState(
-    "SELECT id, title, paise, mode FROM expenses ORDER BY created_at DESC LIMIT 5; -- 0.09ms (WAL)"
+    "SELECT id, title, paise, mode FROM expenses ORDER BY created_at DESC LIMIT 4; -- 0.08ms (WAL)"
   );
 
   const previewPaise = useMemo(() => parseRupeesToPaise(newAmount), [newAmount]);
@@ -225,20 +200,7 @@ export function InteractivePreview() {
     [filteredExpenses]
   );
 
-  const categoryTotals = useMemo(() => {
-    const map: Record<ExpenseCategory, number> = {
-      Food: 0,
-      Travel: 0,
-      "Hostel/Bills": 0,
-      Study: 0,
-    };
-    for (const item of filteredExpenses) {
-      map[item.category] += item.paise;
-    }
-    return map;
-  }, [filteredExpenses]);
-
-  const monthlyBudgetPaise = 500000; // ₹5,000.00 demo cap
+  const monthlyBudgetPaise = 500000;
   const pacingPct = Math.min(
     100,
     Math.round((totalPaise / monthlyBudgetPaise) * 100)
@@ -248,21 +210,23 @@ export function InteractivePreview() {
     e.preventDefault();
     const title = newTitle.trim();
     if (!title || !previewPaise) return;
+    const mode: Exclude<PaymentMode, "All"> =
+      paymentFilter === "All" ? "UPI" : paymentFilter;
     const item: ExpenseItem = {
       id: `e-${Date.now()}`,
       title,
-      category: newCategory,
-      mode: newMode,
+      category: "Quick Add",
+      mode,
       paise: previewPaise,
       time: "Just now",
     };
     setExpenses((prev) => [item, ...prev]);
-    const safeSqlTitle = title.replace(/'/g, "''");
+    const safeTitle = title.replace(/'/g, "''");
     setSqlLog(
-      `INSERT INTO expenses (title, paise, mode) VALUES ('${safeSqlTitle}', ${previewPaise}, '${newMode}'); -- 0.08ms (WAL)`
+      `INSERT INTO expenses (title, paise, mode) VALUES ('${safeTitle}', ${previewPaise}, '${mode}'); -- 0.08ms (WAL)`
     );
     setCmdFeedback(
-      `Logged "${title}" (₹${formatINR(previewPaise)} · ${previewPaise} paise) in 0.08ms`
+      `Logged "${title}" (₹${formatINR(previewPaise)} · ${previewPaise} paise)`
     );
     setNewTitle("");
     setNewAmount("");
@@ -270,17 +234,7 @@ export function InteractivePreview() {
 
   const handleDeleteExpense = (item: ExpenseItem) => {
     setExpenses((prev) => prev.filter((e) => e.id !== item.id));
-    setSqlLog(
-      `DELETE FROM expenses WHERE id = '${item.id}'; -- 0.05ms (WAL)`
-    );
-  };
-
-  const handleResetExpenses = () => {
-    setExpenses(INITIAL_EXPENSES);
-    setPaymentFilter("All");
-    setSqlLog(
-      "ROLLBACK TO SAVEPOINT demo_expenses; SELECT COUNT(*) FROM expenses; -- 0.07ms (WAL)"
-    );
+    setSqlLog(`DELETE FROM expenses WHERE id = '${item.id}'; -- 0.05ms (WAL)`);
   };
 
   const handleTriage = (item: InboxItem, destination: string) => {
@@ -294,7 +248,9 @@ export function InteractivePreview() {
   const resetInbox = () => {
     setInboxItems(INITIAL_INBOX);
     setTriageBanner(null);
-    setSqlLog("SELECT id, text, source FROM inbox WHERE status = 'open'; -- 0.04ms (WAL)");
+    setSqlLog(
+      "SELECT id, text, source FROM inbox WHERE status = 'open'; -- 0.04ms (WAL)"
+    );
   };
 
   const toggleHabitCell = (index: number) => {
@@ -309,7 +265,7 @@ export function InteractivePreview() {
     );
   };
 
-  // Fixed streak logic: if Day 84 (Today) is unchecked, count from Day 83 (Yesterday)
+  // Preserve Yesterday's streak if Today (Day 84) is unchecked
   const currentStreak = useMemo(() => {
     const lastIdx = habitCells.length - 1;
     let startIdx = lastIdx;
@@ -346,10 +302,6 @@ export function InteractivePreview() {
 
   const executeCommand = (cmd: PaletteCommand) => {
     setCmdFeedback(`Executed: ${cmd.label} (0.12ms)`);
-    setLastChord({
-      keys: cmd.shortcut === ">" ? "[⌘K]" : `[${cmd.shortcut}]`,
-      detail: `${cmd.label} in 0.12ms`,
-    });
     setSqlLog(
       `PRAGMA quick_check; -- Command '${cmd.label}' dispatched in 0.12ms (WAL)`
     );
@@ -358,7 +310,7 @@ export function InteractivePreview() {
     }
   };
 
-  const tabs: {
+  const navItems: {
     id: PreviewTab;
     label: string;
     icon: React.ReactNode;
@@ -366,22 +318,22 @@ export function InteractivePreview() {
     {
       id: "expenses",
       label: "Daily Expenses (₹)",
-      icon: <IndianRupee className="h-3.5 w-3.5" aria-hidden="true" />,
+      icon: <IndianRupee className="h-4 w-4" aria-hidden="true" />,
     },
     {
       id: "inbox",
       label: "Inbox Triage",
-      icon: <Inbox className="h-3.5 w-3.5" aria-hidden="true" />,
+      icon: <Inbox className="h-4 w-4" aria-hidden="true" />,
     },
     {
       id: "habits",
       label: "Habit Heatmap",
-      icon: <Grid3X3 className="h-3.5 w-3.5" aria-hidden="true" />,
+      icon: <Grid3X3 className="h-4 w-4" aria-hidden="true" />,
     },
     {
       id: "command",
-      label: "⌘K Palette",
-      icon: <Command className="h-3.5 w-3.5" aria-hidden="true" />,
+      label: "⌘K Command Palette",
+      icon: <Command className="h-4 w-4" aria-hidden="true" />,
     },
   ];
 
@@ -389,163 +341,162 @@ export function InteractivePreview() {
     <section
       id="preview"
       aria-labelledby="preview-heading"
-      className="mx-auto max-w-6xl px-4 py-14 sm:px-6"
+      className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 sm:pb-32"
     >
-      <SectionHeader
-        indexLabel="[01 // INTERACTIVE_VAULT]"
-        headingId="preview-heading"
-        title="Click Around Before You Download"
-        subtitle="An interactive preview of ORBIT's core modules—styled live with whichever theme and mode you selected above."
+      <h2 id="preview-heading" className="sr-only">
+        Interactive ORBIT Workspace Preview
+      </h2>
+
+      {/* Top Specular Highlight Line */}
+      <div
+        aria-hidden="true"
+        className="mx-auto h-px w-2/3 bg-gradient-to-r from-transparent via-sky-400/50 to-transparent"
       />
 
-      {/* Mock Desktop Window */}
-      <div className="relative rounded-xl border border-border bg-surface">
-        <CrosshairCorners />
+      {/* Double-layered Frosted Glass Bezel */}
+      <div className="rounded-2xl border border-white/15 bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-2 shadow-[0_25px_100px_-20px_rgba(56,189,248,0.18)] backdrop-blur-2xl sm:p-3">
+        <div className="overflow-hidden rounded-xl border border-white/10 bg-[#09090e]/90">
+          {/* App Window Titlebar */}
+          <div className="flex items-center justify-between border-b border-white/[0.08] bg-white/[0.02] px-4 py-3">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
+              <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
+              <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
+              <span className="ml-3 font-mono text-xs text-zinc-400">
+                ORBIT Workspace
+              </span>
+            </div>
 
-        {/* Window Titlebar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-t-xl border-b border-border bg-surface-elevated px-4 py-2.5">
-          <div className="flex items-center gap-2">
-            <span
-              className="h-2.5 w-2.5 rounded-full border border-border bg-surface"
-              aria-hidden="true"
-            />
-            <span
-              className="h-2.5 w-2.5 rounded-full border border-border bg-surface"
-              aria-hidden="true"
-            />
-            <span
-              className="h-2.5 w-2.5 rounded-full border border-border bg-surface"
-              aria-hidden="true"
-            />
-            <span className="ml-2 font-mono text-xs font-medium text-text-secondary">
-              orbit.sqlite — 0ms local vault
-            </span>
+            <div className="flex items-center gap-2 font-mono text-[11px] text-zinc-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span>orbit.sqlite · WAL · 0.08ms</span>
+            </div>
           </div>
 
-          <div className="rounded border border-border bg-surface px-2 py-0.5 font-mono text-[11px] text-text-secondary">
-            WAL Mode · Offline Ready
-          </div>
-        </div>
-
-        {/* Module Switcher Tabs */}
-        <div
-          role="tablist"
-          aria-label="ORBIT workspace modules"
-          className="flex flex-wrap gap-1 border-b border-border bg-surface px-3 py-2"
-        >
-          {tabs.map((t) => {
-            const isSelected = activeTab === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                role="tab"
-                aria-selected={isSelected}
-                onClick={() => setActiveTab(t.id)}
-                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
-                  isSelected
-                    ? "border-accent bg-accent text-accent-fg"
-                    : "border-transparent bg-transparent text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
-                }`}
+          {/* OS Sidebar + Main Stage */}
+          <div className="grid md:grid-cols-[220px_1fr]">
+            {/* Left Glass Sidebar */}
+            <aside className="border-b border-white/[0.08] bg-white/[0.02] p-3 md:border-b-0 md:border-r">
+              <div
+                role="tablist"
+                aria-label="ORBIT workspace modules"
+                className="flex gap-1.5 overflow-x-auto md:flex-col"
               >
-                {t.icon}
-                <span>{t.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tab Panel Body */}
-        <div className="p-4 sm:p-6">
-          {/* 1. Daily Expenses (₹) */}
-          {activeTab === "expenses" && (
-            <div className="grid gap-6 lg:grid-cols-5">
-              {/* Left summary & category breakdown */}
-              <div className="space-y-5 lg:col-span-2">
-                <div className="rounded-lg border border-border bg-surface-elevated p-4">
-                  <div className="text-xs font-medium uppercase tracking-wider text-text-secondary">
-                    Filtered Total ({paymentFilter})
-                  </div>
-                  <div className="mt-1 font-mono text-3xl font-bold tracking-tight text-text-primary">
-                    ₹{formatINR(totalPaise)}
-                  </div>
-
-                  {/* Monthly Budget Pacing Bar */}
-                  <div className="mt-4">
-                    <div className="mb-1.5 flex items-center justify-between text-xs text-text-secondary">
-                      <span>Budget Pacing</span>
-                      <span className="font-mono">
-                        {pacingPct}% of ₹{formatINR(monthlyBudgetPaise)}
+                {navItems.map((item) => {
+                  const selected = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={selected}
+                      onClick={() => setActiveTab(item.id)}
+                      className={`flex shrink-0 cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium transition-all ${
+                        selected
+                          ? "border border-white/15 bg-white/[0.08] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                          : "border border-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"
+                      }`}
+                    >
+                      <span
+                        className={selected ? "text-sky-400" : "text-zinc-500"}
+                      >
+                        {item.icon}
                       </span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full border border-border bg-surface">
-                      <div
-                        className="h-full bg-accent transition-all duration-300"
-                        style={{ width: `${pacingPct}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Category Breakdown Bars */}
-                <div className="rounded-lg border border-border bg-surface p-4">
-                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                    Category Breakdown
-                  </h3>
-                  <div className="space-y-3">
-                    {CATEGORIES.map((cat) => {
-                      const amt = categoryTotals[cat];
-                      const pct =
-                        totalPaise > 0
-                          ? Math.round((amt / totalPaise) * 100)
-                          : 0;
-                      return (
-                        <div key={cat}>
-                          <div className="mb-1 flex items-center justify-between text-xs">
-                            <span className="text-text-primary">{cat}</span>
-                            <span className="font-mono text-text-secondary">
-                              ₹{formatINR(amt)} ({pct}%)
-                            </span>
-                          </div>
-                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-elevated">
-                            <div
-                              className="h-full bg-accent transition-all duration-300"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Right Quick-Add + Ledger */}
-              <div className="space-y-4 lg:col-span-3">
-                {/* Quick-Add Expense Form & Paise Inspector */}
-                <form
-                  onSubmit={handleAddExpense}
-                  className="rounded-lg border border-border bg-surface-elevated p-3.5"
-                >
-                  <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
-                      Quick-Add Expense
-                    </span>
-                    <span className="rounded border border-border bg-surface px-2 py-0.5 font-mono text-[11px] text-text-primary">
-                      {previewPaise !== null
-                        ? `₹${formatINR(previewPaise)} → ${previewPaise} paise · IEEE-754 float-bug free`
-                        : "Enter amount > 0 to inspect integer paise"}
-                    </span>
+              <div className="mt-6 hidden rounded-lg border border-white/[0.08] bg-white/[0.02] p-3 md:block">
+                <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                  Engine Status
+                </div>
+                <div className="mt-1.5 flex items-center gap-2 font-mono text-xs text-zinc-300">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  <span>0ms Local Vault</span>
+                </div>
+              </div>
+            </aside>
+
+            {/* Main Interactive Stage */}
+            <div className="min-h-[420px] p-5 sm:p-7">
+              {/* 1. Daily Expenses (₹) */}
+              {activeTab === "expenses" && (
+                <div className="space-y-6">
+                  {/* 3 Glass Stat Cards */}
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="text-xs font-medium text-zinc-400">
+                        Monthly Spend ({paymentFilter})
+                      </div>
+                      <div className="mt-1.5 font-mono text-2xl font-bold tracking-tight text-white">
+                        ₹{formatINR(totalPaise)}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="flex items-center justify-between text-xs font-medium text-zinc-400">
+                        <span>Budget Pacing</span>
+                        <span className="font-mono text-sky-400">
+                          {pacingPct}%
+                        </span>
+                      </div>
+                      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-400 transition-all duration-300"
+                          style={{ width: `${pacingPct}%` }}
+                        />
+                      </div>
+                      <div className="mt-2 font-mono text-[11px] text-zinc-500">
+                        Cap: ₹{formatINR(monthlyBudgetPaise)}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="text-xs font-medium text-zinc-400">
+                        Payment Mode Filter
+                      </div>
+                      <div
+                        role="group"
+                        aria-label="Filter by payment mode"
+                        className="mt-2.5 flex flex-wrap gap-1.5"
+                      >
+                        {(["All", "UPI", "Cash", "Card"] as PaymentMode[]).map(
+                          (mode) => {
+                            const active = paymentFilter === mode;
+                            return (
+                              <button
+                                key={mode}
+                                type="button"
+                                onClick={() => setPaymentFilter(mode)}
+                                className={`cursor-pointer rounded-full border px-2.5 py-0.5 font-mono text-[11px] font-medium transition-colors ${
+                                  active
+                                    ? "border-sky-400/50 bg-sky-400/15 text-sky-300"
+                                    : "border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/[0.07] hover:text-white"
+                                }`}
+                              >
+                                {mode}
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="grid gap-2 sm:grid-cols-12">
+                  {/* Clean 1-Line Quick-Add Expense Bar */}
+                  <form
+                    onSubmit={handleAddExpense}
+                    className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-2.5 sm:flex-row sm:items-center"
+                  >
                     <input
                       type="text"
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                       placeholder="Expense title (e.g. Filter Coffee)"
                       aria-label="Expense title"
-                      className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary outline-none focus:border-accent sm:col-span-4"
+                      className="flex-1 rounded-lg bg-white/[0.04] px-3 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:ring-1 focus:ring-sky-400/60"
                     />
                     <input
                       type="number"
@@ -555,389 +506,284 @@ export function InteractivePreview() {
                       onChange={(e) => setNewAmount(e.target.value)}
                       placeholder="₹ Amount"
                       aria-label="Expense amount in rupees"
-                      className="rounded-md border border-border bg-surface px-2.5 py-1.5 font-mono text-xs text-text-primary outline-none focus:border-accent sm:col-span-2"
+                      className="w-full rounded-lg bg-white/[0.04] px-3 py-2 font-mono text-xs text-white placeholder-zinc-500 outline-none focus:ring-1 focus:ring-sky-400/60 sm:w-28"
                     />
-                    <select
-                      value={newCategory}
-                      onChange={(e) =>
-                        setNewCategory(e.target.value as ExpenseCategory)
-                      }
-                      aria-label="Expense category"
-                      className="rounded-md border border-border bg-surface px-2 py-1.5 text-xs text-text-primary outline-none focus:border-accent sm:col-span-3"
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={newMode}
-                      onChange={(e) =>
-                        setNewMode(
-                          e.target.value as Exclude<PaymentMode, "All">
-                        )
-                      }
-                      aria-label="Payment mode"
-                      className="rounded-md border border-border bg-surface px-2 py-1.5 font-mono text-xs text-text-primary outline-none focus:border-accent sm:col-span-2"
-                    >
-                      <option value="UPI">UPI</option>
-                      <option value="Cash">Cash</option>
-                      <option value="Card">Card</option>
-                    </select>
+                    {previewPaise !== null && (
+                      <span className="shrink-0 rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1.5 font-mono text-[11px] text-sky-300">
+                        {previewPaise} paise
+                      </span>
+                    )}
                     <button
                       type="submit"
                       disabled={!newTitle.trim() || previewPaise === null}
-                      aria-label="Add expense"
-                      className="inline-flex cursor-pointer items-center justify-center gap-1 rounded-md border border-accent bg-accent px-2.5 py-1.5 text-xs font-semibold text-accent-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 sm:col-span-1"
+                      className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-zinc-950 transition-colors hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span>Add</span>
                     </button>
-                  </div>
-                </form>
+                  </form>
 
-                {/* Ledger Header & Payment Mode Filter */}
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
-                      Recent Ledger
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleResetExpenses}
-                      className="inline-flex cursor-pointer items-center gap-1 rounded border border-border bg-surface px-2 py-0.5 text-[11px] font-medium text-text-secondary transition-colors hover:bg-surface-elevated hover:text-text-primary"
-                    >
-                      <RotateCcw className="h-3 w-3" aria-hidden="true" />
-                      <span>Reset</span>
-                    </button>
-                  </div>
-                  <div
-                    role="group"
-                    aria-label="Filter by payment mode"
-                    className="flex flex-wrap gap-1"
-                  >
-                    {(["All", "UPI", "Cash", "Card"] as PaymentMode[]).map(
-                      (mode) => {
-                        const active = paymentFilter === mode;
-                        return (
-                          <button
-                            key={mode}
-                            type="button"
-                            onClick={() => setPaymentFilter(mode)}
-                            className={`cursor-pointer rounded border px-2.5 py-1 font-mono text-xs font-medium transition-colors ${
-                              active
-                                ? "border-accent bg-accent text-accent-fg"
-                                : "border-border bg-surface-elevated text-text-primary hover:bg-surface-hover"
-                            }`}
-                          >
-                            {mode}
-                          </button>
-                        );
-                      }
-                    )}
-                  </div>
-                </div>
-
-                {/* Expense List */}
-                <div className="divide-y divide-border rounded-lg border border-border bg-surface">
-                  {filteredExpenses.length === 0 ? (
-                    <div className="px-4 py-6 text-center text-xs text-text-secondary">
-                      No expenses in this filter. Add one above or click Reset.
-                    </div>
-                  ) : (
-                    filteredExpenses.map((item) => (
+                  {/* Spacious Transaction List */}
+                  <div className="divide-y divide-white/[0.06] rounded-xl border border-white/10 bg-white/[0.02]">
+                    {filteredExpenses.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between gap-3 px-4 py-3"
+                        className="flex items-center justify-between gap-4 px-4 py-3.5"
                       >
                         <div className="min-w-0">
-                          <div className="truncate text-sm font-medium text-text-primary">
+                          <div className="truncate text-sm font-medium text-zinc-100">
                             {item.title}
                           </div>
-                          <div className="mt-0.5 flex items-center gap-2 text-xs text-text-secondary">
+                          <div className="mt-0.5 flex items-center gap-2 text-xs text-zinc-500">
                             <span>{item.category}</span>
                             <span>·</span>
-                            <span className="font-mono">{item.mode}</span>
+                            <span className="font-mono text-zinc-400">
+                              {item.mode}
+                            </span>
                             <span>·</span>
                             <span>{item.time}</span>
                           </div>
                         </div>
                         <div className="flex shrink-0 items-center gap-3">
-                          <span className="font-mono text-sm font-semibold text-text-primary">
+                          <span className="font-mono text-sm font-semibold text-white">
                             ₹{formatINR(item.paise)}
                           </span>
                           <button
                             type="button"
                             onClick={() => handleDeleteExpense(item)}
                             aria-label={`Delete ${item.title}`}
-                            className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded border border-transparent text-text-secondary transition-colors hover:border-border hover:bg-surface-elevated hover:text-text-primary"
+                            className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-zinc-200"
                           >
                             <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                           </button>
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 2. Inbox & One-Click Triage */}
-          {activeTab === "inbox" && (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-text-primary">
-                    Inbox Queue ({inboxItems.length} remaining)
-                  </h3>
-                  <p className="text-xs text-text-secondary">
-                    Click any destination button to triage an item in one
-                    keystroke or click.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={resetInbox}
-                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-primary transition-colors hover:bg-surface-elevated"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span>Reset Demo Inbox</span>
-                </button>
-              </div>
-
-              {triageBanner && (
-                <div
-                  role="status"
-                  className="flex items-center gap-2 rounded-lg border border-accent bg-surface-elevated px-3.5 py-2.5 text-xs font-medium text-text-primary"
-                >
-                  <CheckCircle2
-                    className="h-4 w-4 shrink-0 text-success"
-                    aria-hidden="true"
-                  />
-                  <span>{triageBanner}</span>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {inboxItems.length === 0 ? (
-                <div className="rounded-lg border border-border bg-surface-elevated p-8 text-center">
-                  <Sparkles
-                    className="mx-auto mb-2 h-6 w-6 text-accent"
-                    aria-hidden="true"
-                  />
-                  <div className="text-sm font-semibold text-text-primary">
-                    Inbox Zero Achieved
-                  </div>
-                  <p className="mt-1 text-xs text-text-secondary">
-                    Every captured thought has been routed. Hit Reset Demo Inbox
-                    to test again.
-                  </p>
-                </div>
-              ) : (
-                <div className="divide-y divide-border rounded-lg border border-border">
-                  {inboxItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex flex-col justify-between gap-3 px-4 py-3 sm:flex-row sm:items-center"
-                    >
-                      <div>
-                        <div className="text-sm font-medium text-text-primary">
-                          {item.text}
-                        </div>
-                        <div className="mt-0.5 font-mono text-[11px] text-text-secondary">
-                          Source: {item.source}
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 flex-wrap gap-1.5">
-                        {(["Task", "Calendar", "Library"] as const).map(
-                          (dest) => (
-                            <button
-                              key={dest}
-                              type="button"
-                              onClick={() => handleTriage(item, dest)}
-                              className="inline-flex cursor-pointer items-center gap-1 rounded border border-border bg-surface-elevated px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:border-accent hover:bg-accent hover:text-accent-fg"
-                            >
-                              <ArrowRight
-                                className="h-3 w-3"
-                                aria-hidden="true"
-                              />
-                              <span>{dest}</span>
-                            </button>
-                          )
-                        )}
-                      </div>
+              {/* 2. Inbox Triage */}
+              {activeTab === "inbox" && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">
+                        Inbox Queue ({inboxItems.length} remaining)
+                      </h3>
+                      <p className="text-xs text-zinc-400">
+                        Route any captured thought in one click.
+                      </p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 3. Habit Heatmap */}
-          {activeTab === "habits" && (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-sm font-semibold text-text-primary">
-                    Deep Work &amp; Reading — 12-Week Grid
-                  </h3>
-                  <p className="text-xs text-text-secondary">
-                    Click any day cell to toggle completion. Unchecking Today
-                    preserves your active streak from Yesterday.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-center">
-                    <div className="text-[10px] uppercase tracking-wider text-text-secondary">
-                      Current Streak
-                    </div>
-                    <div className="font-mono text-base font-bold text-text-primary">
-                      {currentStreak}d
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-border bg-surface-elevated px-3 py-1.5 text-center">
-                    <div className="text-[10px] uppercase tracking-wider text-text-secondary">
-                      12-Wk Total
-                    </div>
-                    <div className="font-mono text-base font-bold text-text-primary">
-                      {completedCount}/84
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 12 columns x 7 rows */}
-              <div className="overflow-x-auto rounded-lg border border-border bg-surface-elevated p-4">
-                <div
-                  className="grid w-fit grid-flow-col grid-rows-7 gap-1.5"
-                  role="grid"
-                  aria-label="12-week habit completion grid"
-                >
-                  {habitCells.map((done, idx) => (
                     <button
-                      key={idx}
                       type="button"
-                      onClick={() => toggleHabitCell(idx)}
-                      aria-pressed={done}
-                      aria-label={`Day ${idx + 1}: ${
-                        done ? "Completed" : "Incomplete"
-                      }`}
-                      className={`h-5 w-5 cursor-pointer rounded-[4px] border transition-transform hover:scale-110 sm:h-6 sm:w-6 ${
-                        done
-                          ? "border-accent bg-accent"
-                          : "border-border bg-surface hover:bg-surface-hover"
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+                      onClick={resetInbox}
+                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-white/[0.08] hover:text-white"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span>Reset Inbox</span>
+                    </button>
+                  </div>
 
-          {/* 4. ⌘K Command Palette */}
-          {activeTab === "command" && (
-            <div className="mx-auto max-w-xl space-y-3">
-              <div className="overflow-hidden rounded-lg border border-border bg-surface-elevated">
-                <div className="flex items-center gap-2 border-b border-border bg-surface px-3.5 py-2.5">
-                  <Search
-                    className="h-4 w-4 shrink-0 text-text-secondary"
-                    aria-hidden="true"
-                  />
-                  <input
-                    ref={commandInputRef}
-                    type="text"
-                    value={cmdQuery}
-                    onChange={(e) => setCmdQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && filteredCommands.length > 0) {
-                        e.preventDefault();
-                        executeCommand(filteredCommands[0]);
-                      }
-                    }}
-                    placeholder="Type a command or chord (e.g. 'expense', 'g h')..."
-                    aria-label="Filter ORBIT commands"
-                    className="w-full bg-transparent text-sm text-text-primary outline-none"
-                  />
-                  <kbd className="rounded border border-border bg-surface-elevated px-1.5 py-0.5 font-mono text-[10px] text-text-secondary">
-                    ⌘K
-                  </kbd>
-                </div>
+                  {triageBanner && (
+                    <div
+                      role="status"
+                      className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2.5 text-xs font-medium text-emerald-200"
+                    >
+                      <CheckCircle2
+                        className="h-4 w-4 shrink-0 text-emerald-400"
+                        aria-hidden="true"
+                      />
+                      <span>{triageBanner}</span>
+                    </div>
+                  )}
 
-                <div className="divide-y divide-border">
-                  {filteredCommands.length === 0 ? (
-                    <div className="px-4 py-6 text-center text-xs text-text-secondary">
-                      No matching commands. Try &ldquo;Log&rdquo; or &ldquo;g
-                      e&rdquo;.
+                  {inboxItems.length === 0 ? (
+                    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-10 text-center">
+                      <Sparkles
+                        className="mx-auto mb-2.5 h-6 w-6 text-sky-400"
+                        aria-hidden="true"
+                      />
+                      <div className="text-sm font-semibold text-white">
+                        Inbox Zero Achieved
+                      </div>
+                      <p className="mt-1 text-xs text-zinc-400">
+                        Hit Reset Inbox above to replay the triage flow.
+                      </p>
                     </div>
                   ) : (
-                    filteredCommands.map((cmd) => (
-                      <button
-                        key={cmd.id}
-                        type="button"
-                        onClick={() => executeCommand(cmd)}
-                        className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-surface-hover"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <kbd className="rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-[11px] font-semibold text-accent">
-                            {cmd.shortcut}
-                          </kbd>
-                          <span className="text-text-primary">{cmd.label}</span>
+                    <div className="space-y-2.5">
+                      {inboxItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex flex-col justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3.5 transition-colors hover:bg-white/[0.05] sm:flex-row sm:items-center"
+                        >
+                          <div>
+                            <div className="text-sm font-medium text-zinc-100">
+                              {item.text}
+                            </div>
+                            <div className="mt-0.5 font-mono text-[11px] text-zinc-500">
+                              {item.source}
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap gap-1.5">
+                            {(["Task", "Calendar", "Library"] as const).map(
+                              (dest) => (
+                                <button
+                                  key={dest}
+                                  type="button"
+                                  onClick={() => handleTriage(item, dest)}
+                                  className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-medium text-zinc-200 transition-all hover:border-sky-400/40 hover:bg-sky-400/15 hover:text-sky-200"
+                                >
+                                  <ArrowRight
+                                    className="h-3 w-3"
+                                    aria-hidden="true"
+                                  />
+                                  <span>{dest}</span>
+                                </button>
+                              )
+                            )}
+                          </div>
                         </div>
-                        <span className="font-mono text-[11px] text-text-secondary">
-                          {cmd.group}
-                        </span>
-                      </button>
-                    ))
+                      ))}
+                    </div>
                   )}
                 </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Window Footer Bar: Persistent Command Toast + Live SQLite WAL Query Log Drawer */}
-        <div className="rounded-b-xl border-t border-border bg-surface-elevated">
-          {cmdFeedback && (
-            <div
-              role="status"
-              className="flex items-center justify-between gap-2 border-b border-border bg-surface px-4 py-2 font-mono text-xs text-text-primary"
-            >
-              <span>✓ {cmdFeedback}</span>
-              <button
-                type="button"
-                onClick={() => setCmdFeedback(null)}
-                className="cursor-pointer text-[11px] text-text-secondary hover:text-text-primary"
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
-
-          <div className="px-4 py-2">
-            <button
-              type="button"
-              onClick={() => setSqlDrawerOpen((prev) => !prev)}
-              aria-expanded={sqlDrawerOpen}
-              className="flex w-full cursor-pointer items-center justify-between gap-2 text-left font-mono text-[11px] text-text-secondary hover:text-text-primary"
-            >
-              <span className="inline-flex items-center gap-1.5">
-                <Database className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
-                <span className="font-semibold text-text-primary">
-                  SQLite WAL Query Log
-                </span>
-              </span>
-              {sqlDrawerOpen ? (
-                <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
               )}
-            </button>
 
-            {sqlDrawerOpen && (
-              <div className="mt-1.5 overflow-x-auto rounded border border-border bg-surface px-3 py-2 font-mono text-xs text-text-primary">
-                <span className="mr-2 select-none text-accent">sqlite&gt;</span>
-                <span>{sqlLog}</span>
+              {/* 3. Habit Heatmap */}
+              {activeTab === "habits" && (
+                <div className="space-y-6">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">
+                        Deep Work &amp; Reading — 12-Week Grid
+                      </h3>
+                      <p className="text-xs text-zinc-400">
+                        Click any cell to toggle completion. Yesterday&apos;s
+                        streak stays intact if Today is open.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-center">
+                        <div className="text-[10px] uppercase tracking-wider text-zinc-500">
+                          Streak
+                        </div>
+                        <div className="font-mono text-xl font-bold text-sky-400">
+                          {currentStreak}d
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-center">
+                        <div className="text-[10px] uppercase tracking-wider text-zinc-500">
+                          12-Wk Total
+                        </div>
+                        <div className="font-mono text-xl font-bold text-white">
+                          {completedCount}/84
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/[0.02] p-5">
+                    <div
+                      className="grid w-fit grid-flow-col grid-rows-7 gap-2"
+                      role="grid"
+                      aria-label="12-week habit completion grid"
+                    >
+                      {habitCells.map((done, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => toggleHabitCell(idx)}
+                          aria-pressed={done}
+                          aria-label={`Day ${idx + 1}: ${
+                            done ? "Completed" : "Incomplete"
+                          }`}
+                          className={`h-5 w-5 cursor-pointer rounded-[5px] border transition-all hover:scale-110 sm:h-6 sm:w-6 ${
+                            done
+                              ? "border-sky-400/60 bg-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.35)]"
+                              : "border-white/10 bg-white/[0.04] hover:bg-white/[0.09]"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 4. ⌘K Command Palette (Centered Floating Glass Modal) */}
+              {activeTab === "command" && (
+                <div className="flex min-h-[340px] items-center justify-center">
+                  <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/15 bg-zinc-900/75 shadow-2xl shadow-black/70 backdrop-blur-xl">
+                    <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-3">
+                      <Search
+                        className="h-4 w-4 shrink-0 text-zinc-400"
+                        aria-hidden="true"
+                      />
+                      <input
+                        type="text"
+                        value={cmdQuery}
+                        onChange={(e) => setCmdQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && filteredCommands.length > 0) {
+                            e.preventDefault();
+                            executeCommand(filteredCommands[0]);
+                          }
+                        }}
+                        placeholder="Type a command or chord (e.g. 'expense', 'g h')..."
+                        aria-label="Filter ORBIT commands"
+                        className="w-full bg-transparent text-sm text-white placeholder-zinc-500 outline-none"
+                      />
+                      <kbd className="rounded border border-white/15 bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-zinc-400">
+                        ⌘K
+                      </kbd>
+                    </div>
+
+                    <div className="divide-y divide-white/[0.06]">
+                      {filteredCommands.length === 0 ? (
+                        <div className="px-4 py-6 text-center text-xs text-zinc-500">
+                          No matching commands.
+                        </div>
+                      ) : (
+                        filteredCommands.map((cmd) => (
+                          <button
+                            key={cmd.id}
+                            type="button"
+                            onClick={() => executeCommand(cmd)}
+                            className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-white/[0.06]"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <kbd className="rounded border border-white/10 bg-white/[0.05] px-1.5 py-0.5 font-mono text-[11px] font-semibold text-sky-400">
+                                {cmd.shortcut}
+                              </kbd>
+                              <span className="text-zinc-100">{cmd.label}</span>
+                            </div>
+                            <span className="font-mono text-[11px] text-zinc-500">
+                              {cmd.group}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Ultra-Minimal 1-Line SQLite Query Ticker + Persistent Command Status */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] bg-white/[0.02] px-4 py-2.5 font-mono text-[11px]">
+            <div className="min-w-0 truncate text-zinc-400">
+              <span className="mr-2 text-sky-400">sqlite&gt;</span>
+              <span>{sqlLog}</span>
+            </div>
+            {cmdFeedback && (
+              <div
+                role="status"
+                className="shrink-0 text-emerald-400"
+              >
+                ✓ {cmdFeedback}
               </div>
             )}
           </div>

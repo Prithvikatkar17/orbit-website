@@ -1,6 +1,5 @@
 import React from "react";
 import { Globe, Monitor, Check, ArrowUpRight, Download } from "lucide-react";
-import { CrosshairCorners, SectionHeader } from "./section-header";
 import { APP_URL, RELEASES_URL } from "@/lib/config";
 
 const WEB_FEATURES = [
@@ -22,49 +21,54 @@ const DESKTOP_FEATURES = [
 export function EditionCompare() {
   return (
     <section
-      id="compare"
-      aria-labelledby="compare-heading"
-      className="mx-auto max-w-6xl px-4 py-14 sm:px-6"
+      id="editions"
+      aria-labelledby="editions-heading"
+      className="mx-auto max-w-6xl px-4 py-24 sm:px-6 sm:py-32"
     >
-      <SectionHeader
-        indexLabel="[03 // STORAGE_ENGINES]"
-        headingId="compare-heading"
-        title="Browser PWA vs. Windows Desktop"
-        subtitle="Same keyboard-first workspace, same 7 themes, same local-first privacy—choose the storage engine that fits your workflow."
-      />
+      <div className="mb-14 text-center">
+        <h2
+          id="editions-heading"
+          className="bg-gradient-to-b from-white to-white/60 bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl"
+        >
+          Choose Your Local Engine
+        </h2>
+        <p className="mx-auto mt-3 max-w-2xl text-base text-zinc-400">
+          Identical keyboard-first workspace and privacy guarantees—built for
+          both instant browser access and native desktop storage.
+        </p>
+      </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Web / PWA Card */}
-        <article className="relative flex flex-col justify-between rounded-xl border border-border bg-surface p-6">
-          <CrosshairCorners />
+      <div className="grid gap-8 md:grid-cols-2">
+        {/* Web / PWA Edition */}
+        <article className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-8 backdrop-blur-xl">
           <div>
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-elevated text-accent">
-                  <Globe className="h-4 w-4" aria-hidden="true" />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-sky-400">
+                  <Globe className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <div>
-                  <h3 className="text-lg font-bold text-text-primary">
+                  <h3 className="text-xl font-semibold text-white">
                     Web / PWA Edition
                   </h3>
-                  <p className="font-mono text-xs text-text-secondary">
+                  <p className="font-mono text-xs text-zinc-400">
                     IndexedDB · Any Device
                   </p>
                 </div>
               </div>
-              <span className="rounded-full border border-border bg-badge-bg px-2.5 py-0.5 text-xs font-medium text-text-primary">
+              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-medium text-zinc-300">
                 No Install
               </span>
             </div>
 
-            <ul className="mt-6 space-y-3">
+            <ul className="mt-8 space-y-4">
               {WEB_FEATURES.map((feat) => (
                 <li
                   key={feat}
-                  className="flex items-start gap-2.5 text-sm text-text-secondary"
+                  className="flex items-start gap-3 text-sm text-zinc-300"
                 >
                   <Check
-                    className="mt-0.5 h-4 w-4 shrink-0 text-accent"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-sky-400"
                     aria-hidden="true"
                   />
                   <span>{feat}</span>
@@ -73,50 +77,54 @@ export function EditionCompare() {
             </ul>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-10">
             <a
               href={APP_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-accent bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg transition-opacity hover:opacity-90"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-semibold text-zinc-950 shadow-[0_0_30px_-5px_rgba(255,255,255,0.3)] transition-all hover:bg-zinc-200"
             >
-              <span>Try in Browser</span>
+              <span>Try Live in Browser</span>
               <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
             </a>
           </div>
         </article>
 
-        {/* Windows Desktop Card */}
-        <article className="relative flex flex-col justify-between rounded-xl border border-border bg-surface p-6">
-          <CrosshairCorners />
+        {/* Windows Desktop Edition (Glowing Top Specular Border) */}
+        <article className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-sky-400/25 bg-gradient-to-b from-sky-400/[0.06] to-white/[0.02] p-8 shadow-[0_0_60px_-20px_rgba(56,189,248,0.25)] backdrop-blur-xl">
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/70 to-transparent"
+          />
+
           <div>
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-elevated text-accent">
-                  <Monitor className="h-4 w-4" aria-hidden="true" />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-400/10 text-sky-400">
+                  <Monitor className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <div>
-                  <h3 className="text-lg font-bold text-text-primary">
+                  <h3 className="text-xl font-semibold text-white">
                     Windows Desktop Edition
                   </h3>
-                  <p className="font-mono text-xs text-text-secondary">
+                  <p className="font-mono text-xs text-zinc-400">
                     orbit.sqlite (WAL) · .exe
                   </p>
                 </div>
               </div>
-              <span className="rounded-full border border-border bg-badge-bg px-2.5 py-0.5 text-xs font-medium text-text-primary">
+              <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-300">
                 Native Vault
               </span>
             </div>
 
-            <ul className="mt-6 space-y-3">
+            <ul className="mt-8 space-y-4">
               {DESKTOP_FEATURES.map((feat) => (
                 <li
                   key={feat}
-                  className="flex items-start gap-2.5 text-sm text-text-secondary"
+                  className="flex items-start gap-3 text-sm text-zinc-300"
                 >
                   <Check
-                    className="mt-0.5 h-4 w-4 shrink-0 text-accent"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-sky-400"
                     aria-hidden="true"
                   />
                   <span>{feat}</span>
@@ -125,15 +133,15 @@ export function EditionCompare() {
             </ul>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-10">
             <a
               href={RELEASES_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-elevated px-4 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.08] px-6 py-3.5 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] transition-all hover:bg-white/[0.14]"
             >
-              <Download className="h-4 w-4" aria-hidden="true" />
-              <span>Download .exe Installer</span>
+              <Download className="h-4 w-4 text-sky-400" aria-hidden="true" />
+              <span>Download for Windows (.exe)</span>
             </a>
           </div>
         </article>

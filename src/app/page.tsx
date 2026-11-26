@@ -3,24 +3,22 @@ import { Navbar } from "@/components/navbar";
 import { Hero } from "@/components/hero";
 import { InteractivePreview } from "@/components/interactive-preview";
 import { FeaturesOverview } from "@/components/features-overview";
-import { EditionCompare } from "@/components/edition-compare";
 import { BentoArchitecture } from "@/components/bento-architecture";
+import { EditionCompare } from "@/components/edition-compare";
 import { Footer } from "@/components/footer";
-import { KeyboardHud } from "@/components/keyboard-hud";
 
 export default function HomePage() {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-[#050508]">
       <Navbar />
       <main className="flex-1">
         <Hero />
         <InteractivePreview />
         <FeaturesOverview />
-        <EditionCompare />
         <BentoArchitecture />
+        <EditionCompare />
       </main>
       <Footer />
-      <KeyboardHud />
     </div>
   );
 }

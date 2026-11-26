@@ -7,6 +7,7 @@ import {
   BookOpen,
   IndianRupee,
 } from "lucide-react";
+import { SectionHeader } from "./section-header";
 
 const MODULES = [
   {
@@ -54,22 +55,12 @@ export function FeaturesOverview() {
       aria-labelledby="features-heading"
       className="mx-auto max-w-6xl px-4 py-14 sm:px-6"
     >
-      <div className="mb-10 text-center">
-        <h2
-          id="features-heading"
-          className="text-2xl font-bold tracking-tight sm:text-3xl"
-          style={{ color: "var(--text-primary)" }}
-        >
-          Six Essential Modules. One Cohesive Vault.
-        </h2>
-        <p
-          className="mx-auto mt-2 max-w-2xl text-sm sm:text-base"
-          style={{ color: "var(--text-secondary)" }}
-        >
-          Everything you need to run your day—unified under one keyboard-first
-          interface with 0ms local reads.
-        </p>
-      </div>
+      <SectionHeader
+        indexLabel="[02 // MODULES]"
+        headingId="features-heading"
+        title="Six Essential Modules. One Cohesive Vault."
+        subtitle="Everything you need to run your day—unified under one keyboard-first interface with 0ms local reads."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {MODULES.map((mod) => {
@@ -77,32 +68,15 @@ export function FeaturesOverview() {
           return (
             <article
               key={mod.title}
-              className="rounded-xl border p-5"
-              style={{
-                backgroundColor: "var(--surface)",
-                borderColor: "var(--border)",
-              }}
+              className="rounded-xl border border-border bg-surface p-5 transition-colors hover:bg-surface-elevated"
             >
-              <div
-                className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg border"
-                style={{
-                  backgroundColor: "var(--surface-elevated)",
-                  borderColor: "var(--border)",
-                  color: "var(--accent)",
-                }}
-              >
+              <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-elevated text-accent">
                 <Icon className="h-4 w-4" aria-hidden="true" />
               </div>
-              <h3
-                className="text-base font-bold"
-                style={{ color: "var(--text-primary)" }}
-              >
+              <h3 className="text-base font-bold text-text-primary">
                 {mod.title}
               </h3>
-              <p
-                className="mt-1.5 text-sm leading-relaxed"
-                style={{ color: "var(--text-secondary)" }}
-              >
+              <p className="mt-1.5 text-sm leading-relaxed text-text-secondary">
                 {mod.description}
               </p>
             </article>

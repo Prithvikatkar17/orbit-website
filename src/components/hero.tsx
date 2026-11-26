@@ -9,6 +9,7 @@ import {
   Palette,
 } from "lucide-react";
 import { ORBIT_THEMES, useTheme } from "./theme-provider";
+import { CrosshairCorners } from "./section-header";
 import { APP_URL, RELEASES_URL } from "@/lib/config";
 
 export function Hero() {
@@ -18,50 +19,32 @@ export function Hero() {
     <section className="mx-auto max-w-6xl px-4 pb-16 pt-12 sm:px-6 sm:pt-20">
       <div className="mx-auto max-w-3xl text-center">
         {/* Eyebrow badge */}
-        <div
-          className="mb-6 inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-medium tracking-wide"
-          style={{
-            backgroundColor: "var(--surface)",
-            borderColor: "var(--border)",
-            color: "var(--text-secondary)",
-          }}
-        >
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-1 text-xs font-medium tracking-wide text-text-secondary">
           <span
-            className="h-2 w-2 rounded-full"
-            style={{ backgroundColor: "var(--accent)" }}
+            className="h-2 w-2 rounded-full bg-accent"
             aria-hidden="true"
           />
           <span>100% Local-First · Zero Cloud · Zero Subscriptions</span>
         </div>
 
         {/* Headline */}
-        <h1
-          className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl"
-          style={{ color: "var(--text-primary)", lineHeight: 1.08 }}
-        >
+        <h1 className="text-4xl font-bold leading-[1.08] tracking-tight text-text-primary sm:text-5xl lg:text-6xl">
           Your Personal OS, Living Entirely on Your Device.
         </h1>
 
         {/* Subcopy */}
-        <p
-          className="mx-auto mt-5 max-w-2xl text-base leading-relaxed sm:text-lg"
-          style={{ color: "var(--text-secondary)" }}
-        >
+        <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-text-secondary sm:text-lg">
           ORBIT unifies Inbox triage, Tasks, Habit heatmaps, Calendar, Personal
-          Library, and Daily Expenses (<span className="font-mono font-semibold">₹</span>{" "}
+          Library, and Daily Expenses (
+          <span className="font-mono font-semibold text-text-primary">₹</span>{" "}
           INR paise precision) with 0ms offline speed—no account, no telemetry,
           no monthly fee.
         </p>
 
         {/* Interactive 7-Theme Switcher Bar */}
-        <div
-          className="mx-auto mt-8 rounded-xl border p-3"
-          style={{
-            backgroundColor: "var(--surface)",
-            borderColor: "var(--border)",
-          }}
-        >
-          <div className="mb-2.5 flex items-center justify-center gap-1.5 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
+        <div className="relative mx-auto mt-8 rounded-xl border border-border bg-surface p-3">
+          <CrosshairCorners />
+          <div className="mb-2.5 flex items-center justify-center gap-1.5 text-xs font-medium text-text-secondary">
             <Palette className="h-3.5 w-3.5" aria-hidden="true" />
             <span>Test ORBIT&apos;s 7 live themes right here:</span>
           </div>
@@ -82,23 +65,17 @@ export function Hero() {
                   aria-checked={active}
                   onClick={() => setTheme(item.id)}
                   title={`${item.name} — ${item.tagline}`}
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
-                  style={{
-                    backgroundColor: active
-                      ? "var(--accent)"
-                      : "var(--surface-elevated)",
-                    borderColor: active ? "var(--accent)" : "var(--border)",
-                    color: active ? "var(--accent-fg)" : "var(--text-primary)",
-                  }}
+                  className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    active
+                      ? "border-accent bg-accent text-accent-fg"
+                      : "border-border bg-surface-elevated text-text-primary hover:bg-surface-hover"
+                  }`}
                 >
                   <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full border"
-                    style={{
-                      backgroundColor: swatch,
-                      borderColor: active
-                        ? "var(--accent-fg)"
-                        : "var(--border)",
-                    }}
+                    className={`h-2.5 w-2.5 shrink-0 rounded-full border ${
+                      active ? "border-accent-fg" : "border-border"
+                    }`}
+                    style={{ backgroundColor: swatch }}
                     aria-hidden="true"
                   />
                   <span>{item.name}</span>
@@ -116,20 +93,12 @@ export function Hero() {
               href={APP_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border px-5 py-3.5 text-sm font-semibold transition-opacity hover:opacity-90"
-              style={{
-                backgroundColor: "var(--accent)",
-                borderColor: "var(--accent)",
-                color: "var(--accent-fg)",
-              }}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-accent bg-accent px-5 py-3.5 text-sm font-semibold text-accent-fg transition-opacity hover:opacity-90"
             >
               <span>Try Live in Browser (No Install)</span>
               <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
             </a>
-            <p
-              className="mt-2 text-xs"
-              style={{ color: "var(--text-secondary)" }}
-            >
+            <p className="mt-2 text-xs text-text-secondary">
               Works instantly on phone, Mac, or any browser · Offline IndexedDB
             </p>
           </div>
@@ -140,20 +109,12 @@ export function Hero() {
               href={RELEASES_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border px-5 py-3.5 text-sm font-semibold transition-colors hover:bg-[var(--surface-elevated)]"
-              style={{
-                backgroundColor: "var(--surface)",
-                borderColor: "var(--border)",
-                color: "var(--text-primary)",
-              }}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-5 py-3.5 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-elevated"
             >
               <Download className="h-4 w-4" aria-hidden="true" />
               <span>Download for Windows (.exe)</span>
             </a>
-            <p
-              className="mt-2 text-xs"
-              style={{ color: "var(--text-secondary)" }}
-            >
+            <p className="mt-2 text-xs text-text-secondary">
               Windows 10/11 (64-bit) · Native{" "}
               <code className="font-mono">orbit.sqlite</code> vault
             </p>
@@ -162,25 +123,14 @@ export function Hero() {
 
         {/* Honest SmartScreen Helper Accordion */}
         <div className="mx-auto mt-6 max-w-xl text-left">
-          <details
-            className="orbit-accordion rounded-lg border"
-            style={{
-              backgroundColor: "var(--surface)",
-              borderColor: "var(--border)",
-            }}
-          >
-            <summary
-              className="flex items-center gap-2 px-4 py-3 text-xs font-medium sm:text-sm"
-              style={{ color: "var(--text-primary)" }}
-            >
+          <details className="orbit-accordion rounded-lg border border-border bg-surface">
+            <summary className="flex items-center gap-2 px-4 py-3 text-xs font-medium text-text-primary transition-colors hover:bg-surface-elevated sm:text-sm">
               <ChevronRight
-                className="accordion-chevron h-4 w-4 shrink-0"
-                style={{ color: "var(--text-secondary)" }}
+                className="accordion-chevron h-4 w-4 shrink-0 text-text-secondary"
                 aria-hidden="true"
               />
               <ShieldCheck
-                className="h-4 w-4 shrink-0"
-                style={{ color: "var(--accent)" }}
+                className="h-4 w-4 shrink-0 text-accent"
                 aria-hidden="true"
               />
               <span>
@@ -188,21 +138,15 @@ export function Hero() {
                 <code className="font-mono">.exe</code>?
               </span>
             </summary>
-            <div
-              className="border-t px-4 py-3 text-xs leading-relaxed sm:text-sm"
-              style={{
-                borderColor: "var(--border)",
-                color: "var(--text-secondary)",
-              }}
-            >
+            <div className="border-t border-border px-4 py-3 text-xs leading-relaxed text-text-secondary sm:text-sm">
               Because ORBIT is independently built and open-source without a
               paid corporate EV code-signing certificate, Windows SmartScreen
               may show{" "}
-              <strong style={{ color: "var(--text-primary)" }}>
+              <strong className="text-text-primary">
                 &ldquo;Windows protected your PC&rdquo;
               </strong>{" "}
               on first launch. Click{" "}
-              <strong style={{ color: "var(--text-primary)" }}>
+              <strong className="text-text-primary">
                 More info → Run anyway
               </strong>{" "}
               to launch the installer cleanly, or use the Browser PWA with zero

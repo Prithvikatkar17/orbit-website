@@ -4,35 +4,16 @@ import { APP_URL, APP_VERSION, GITHUB_URL, RELEASES_URL } from "@/lib/config";
 
 export function Footer() {
   return (
-    <footer
-      className="mt-12 border-t"
-      style={{
-        backgroundColor: "var(--surface)",
-        borderColor: "var(--border)",
-      }}
-    >
+    <footer className="mt-12 border-t border-border bg-surface">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm sm:flex-row sm:px-6">
         <div className="flex items-center gap-3">
-          <span
-            className="font-bold tracking-tight"
-            style={{ color: "var(--text-primary)" }}
-          >
+          <span className="font-bold tracking-tight text-text-primary">
             ORBIT
           </span>
-          <span
-            className="rounded-full border px-2 py-0.5 font-mono text-[11px]"
-            style={{
-              backgroundColor: "var(--badge-bg)",
-              borderColor: "var(--border)",
-              color: "var(--text-secondary)",
-            }}
-          >
+          <span className="rounded-full border border-border bg-badge-bg px-2 py-0.5 font-mono text-[11px] text-text-secondary">
             {APP_VERSION}
           </span>
-          <span
-            className="text-xs"
-            style={{ color: "var(--text-secondary)" }}
-          >
+          <span className="text-xs text-text-secondary">
             Local-first Personal OS
           </span>
         </div>
@@ -42,8 +23,7 @@ export function Footer() {
             href={APP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 hover:underline"
-            style={{ color: "var(--text-primary)" }}
+            className="inline-flex items-center gap-1 text-text-primary hover:underline"
           >
             <span>Live Web App</span>
             <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -52,8 +32,7 @@ export function Footer() {
             href={RELEASES_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 hover:underline"
-            style={{ color: "var(--text-secondary)" }}
+            className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary hover:underline"
           >
             <span>Windows Releases</span>
             <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -62,8 +41,7 @@ export function Footer() {
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 hover:underline"
-            style={{ color: "var(--text-secondary)" }}
+            className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary hover:underline"
           >
             <span>GitHub</span>
             <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />

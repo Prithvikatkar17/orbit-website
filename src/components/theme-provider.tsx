@@ -81,9 +81,10 @@ export const ORBIT_THEMES: OrbitThemeMeta[] = [
 interface ThemeContextValue {
   theme: OrbitThemeId;
   setTheme: (theme: OrbitThemeId) => void;
+  cycleTheme: () => OrbitThemeMeta;
   mode: ColorMode;
   resolvedMode: "light" | "dark";
-  toggleMode: () => void;
+  toggleMode: () => "light" | "dark";
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -122,14 +123,21 @@ function getModeSnapshot(): ColorMode {
   }
 }
 
+function applyThemeToDom(theme: OrbitThemeId, mode: ColorMode) {
+  if (typeof document === "undefined") return;
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.dataset.colorScheme = mode;
+  document.documentElement.style.colorScheme = mode;
+  const meta = document.querySelector('meta[name="color-scheme"]');
+  if (meta) {
+    meta.setAttribute("content", mode);
+  }
+}
+
 function subscribeThemeStore(callback: () => void): () => void {
   const onStorage = (e: StorageEvent) => {
-    if (e.key === "orbit-theme") {
-      document.documentElement.dataset.theme = getThemeSnapshot();
-      callback();
-    } else if (e.key === "color-scheme") {
-      const meta = document.querySelector('meta[name="color-scheme"]');
-      if (meta) meta.setAttribute("content", getModeSnapshot());
+    if (e.key === "orbit-theme" || e.key === "color-scheme") {
+      applyThemeToDom(getThemeSnapshot(), getModeSnapshot());
       callback();
     }
   };
@@ -139,15 +147,6 @@ function subscribeThemeStore(callback: () => void): () => void {
     window.removeEventListener("storage", onStorage);
     window.removeEventListener(THEME_CHANGE_EVENT, callback);
   };
-}
-
-function applyThemeToDom(theme: OrbitThemeId, mode: ColorMode) {
-  if (typeof document === "undefined") return;
-  document.documentElement.dataset.theme = theme;
-  const meta = document.querySelector('meta[name="color-scheme"]');
-  if (meta) {
-    meta.setAttribute("content", mode);
-  }
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -170,7 +169,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 
   const resolvedMode: "light" | "dark" =
-    mode === "light" ? "light" : mode === "dark" ? "dark" : systemDark ? "dark" : "light";
+    mode === "light"
+      ? "light"
+      : mode === "dark"
+      ? "dark"
+      : systemDark
+      ? "dark"
+      : "light";
 
   const setTheme = useCallback(
     (nextTheme: OrbitThemeId) => {
@@ -185,7 +190,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     [mode]
   );
 
-  const toggleMode = useCallback(() => {
+  const cycleTheme = useCallback(() => {
+    const idx = ORBIT_THEMES.findIndex((t) => t.id === theme);
+    const next = ORBIT_THEMES[(idx + 1) % ORBIT_THEMES.length];
+    setTheme(next.id);
+    return next;
+  }, [theme, setTheme]);
+
+  const toggleMode = useCallback((): "light" | "dark" => {
     const currentlyDark = resolvedMode === "dark";
     const target: "light" | "dark" = currentlyDark ? "light" : "dark";
     const sysDark = getSystemDarkSnapshot();
@@ -203,6 +215,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
     applyThemeToDom(theme, nextMode);
     window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
+    return target;
   }, [resolvedMode, theme]);
 
   return (
@@ -210,6 +223,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       value={{
         theme,
         setTheme,
+        cycleTheme,
         mode,
         resolvedMode,
         toggleMode,

@@ -6,6 +6,7 @@ import { FeaturesOverview } from "@/components/features-overview";
 import { EditionCompare } from "@/components/edition-compare";
 import { BentoArchitecture } from "@/components/bento-architecture";
 import { Footer } from "@/components/footer";
+import { KeyboardHud } from "@/components/keyboard-hud";
 
 export default function HomePage() {
   return (
@@ -19,6 +20,7 @@ export default function HomePage() {
         <BentoArchitecture />
       </main>
       <Footer />
+      <KeyboardHud />
     </div>
   );
 }

@@ -1,27 +1,19 @@
 @import "tailwindcss";
 
+@theme inline {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-instrument), ui-serif, Georgia, Cambria, serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+}
+
 :root {
   color-scheme: dark;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-}
-
-@property --angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-
-@keyframes border-beam-spin {
-  to {
-    --angle: 360deg;
-  }
 }
 
 html {
   scroll-behavior: smooth;
-  background-color: #090d16;
-  color: #f1f5f9;
+  background-color: #080b12;
+  color: #f8fafc;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -31,26 +23,23 @@ html {
 }
 
 body {
-  background-color: #090d16;
-  background-image: linear-gradient(
-    180deg,
-    #0d1322 0%,
-    #090d16 35%,
-    #0b101d 75%,
-    #070a12 100%
+  background-color: #080b12;
+  background-image: radial-gradient(
+    ellipse 80% 50% at 50% -10%,
+    rgba(56, 189, 248, 0.08),
+    transparent 70%
   );
-  color: #f1f5f9;
-  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  color: #f8fafc;
+  font-family: var(--font-sans);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
-code,
-kbd,
-pre,
-.font-mono {
-  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+/* Subtle tactile film-grain noise overlay */
+.film-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.025;
 }
 
 :focus-visible {
@@ -61,47 +50,17 @@ pre,
 /* Perspective grid background for Hero */
 .hero-grid-mask {
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
   background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse at center, black 25%, transparent 72%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 25%, transparent 72%);
 }
 
-/* Animated Travelling Border-Beam */
-.border-beam {
-  position: relative;
-}
-
-.border-beam::after {
-  content: "";
-  pointer-events: none;
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--angle),
-    transparent 70%,
-    #38bdf8 85%,
-    #818cf8 95%,
-    #34d399 100%
-  );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  animation: border-beam-spin 6s linear infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .border-beam::after {
-    animation: none;
-  }
+/* Bottom fade mask for visual-first bento mini-canvases */
+.bento-canvas-fade {
+  mask-image: linear-gradient(to bottom, black 68%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 68%, transparent 100%);
 }
 
 /* Mouse-tracking spotlight card glow */
@@ -118,8 +77,8 @@ pre,
   inset: 0;
   border-radius: inherit;
   background: radial-gradient(
-    420px circle at var(--mouse-x) var(--mouse-y),
-    rgba(56, 189, 248, 0.16),
+    380px circle at var(--mouse-x) var(--mouse-y),
+    rgba(56, 189, 248, 0.11),
     transparent 65%
   );
   opacity: 0;

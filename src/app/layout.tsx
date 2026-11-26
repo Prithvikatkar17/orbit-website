@@ -1,10 +1,35 @@
 import type { Metadata } from "next";
+import {
+  Plus_Jakarta_Sans,
+  Instrument_Serif,
+  JetBrains_Mono,
+} from "next/font/google";
 import "./globals.css";
 
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+  display: "swap",
+});
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: "italic",
+  variable: "--font-instrument",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "ORBIT — Your Personal OS. Zero Cloud. Infinite Speed.",
+  title: "ORBIT — Local-First Personal OS",
   description:
-    "100% local-first personal OS unifying Inbox triage, Tasks, Habit heatmaps, Calendar, Personal Library, and Daily Expenses (₹ INR paise precision) with 0ms SQLite & IndexedDB.",
+    "Your personal life doesn't belong on a slow cloud server. ORBIT runs in 0.1ms directly from a local SQLite file—unifying Inbox, Tasks, Habit Heatmaps, Library, and Daily ₹ INR Expenses.",
 };
 
 export default function RootLayout({
@@ -13,11 +38,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html
+      lang="en"
+      className={`dark ${plusJakarta.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable}`}
+    >
       <head>
         <meta name="color-scheme" content="dark" />
       </head>
-      <body className="min-h-screen bg-[#090d16] text-slate-100 antialiased selection:bg-sky-500/30 selection:text-sky-100">
+      <body className="min-h-screen bg-[#080b12] text-[#f8fafc] antialiased selection:bg-sky-400/25 selection:text-sky-100">
+        <div
+          aria-hidden="true"
+          className="film-grain pointer-events-none fixed inset-0 z-[100]"
+        />
         {children}
       </body>
     </html>

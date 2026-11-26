@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   IndianRupee,
   Inbox,
@@ -13,6 +13,7 @@ import {
   Sparkles,
   Plus,
   Trash2,
+  ChevronDown,
 } from "lucide-react";
 import { ScrollReveal } from "./scroll-reveal";
 
@@ -164,8 +165,22 @@ const PALETTE_COMMANDS: PaletteCommand[] = [
   },
 ];
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return (
+    tag === "INPUT" ||
+    tag === "TEXTAREA" ||
+    tag === "SELECT" ||
+    target.isContentEditable
+  );
+}
+
 export function InteractivePreview() {
   const [activeTab, setActiveTab] = useState<PreviewTab>("expenses");
+  const cmdInputRef = useRef<HTMLInputElement | null>(null);
+  const gTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [gArmed, setGArmed] = useState(false);
 
   const [expenses, setExpenses] = useState<ExpenseItem[]>(INITIAL_EXPENSES);
   const [paymentFilter, setPaymentFilter] = useState<PaymentMode>("All");
@@ -183,6 +198,66 @@ export function InteractivePreview() {
   const [sqlLog, setSqlLog] = useState(
     "SELECT id, title, paise, mode FROM expenses ORDER BY created_at DESC LIMIT 4; -- 0.08ms (WAL)"
   );
+
+  // Physical keyboard chord listener for g+e, g+i, g+h, ⌘K
+  useEffect(() => {
+    const clearArmed = () => {
+      setGArmed(false);
+      if (gTimerRef.current) {
+        clearTimeout(gTimerRef.current);
+        gTimerRef.current = null;
+      }
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        clearArmed();
+        setActiveTab("command");
+        setCmdFeedback("Focused ⌘K Palette (0.1ms)");
+        requestAnimationFrame(() => cmdInputRef.current?.focus());
+        return;
+      }
+
+      if (isEditableTarget(e.target)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const key = e.key.toLowerCase();
+
+      if (gArmed) {
+        clearArmed();
+        if (key === "e") {
+          e.preventDefault();
+          setActiveTab("expenses");
+          setCmdFeedback("Chord [g → e] · Daily Expenses (0.1ms)");
+        } else if (key === "i") {
+          e.preventDefault();
+          setActiveTab("inbox");
+          setCmdFeedback("Chord [g → i] · Inbox Triage (0.1ms)");
+        } else if (key === "h") {
+          e.preventDefault();
+          setActiveTab("habits");
+          setCmdFeedback("Chord [g → h] · Habit Heatmap (0.1ms)");
+        }
+        return;
+      }
+
+      if (key === "g") {
+        setGArmed(true);
+        if (gTimerRef.current) clearTimeout(gTimerRef.current);
+        gTimerRef.current = setTimeout(() => {
+          setGArmed(false);
+          gTimerRef.current = null;
+        }, 800);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      if (gTimerRef.current) clearTimeout(gTimerRef.current);
+    };
+  }, [gArmed]);
 
   const previewPaise = useMemo(() => parseRupeesToPaise(newAmount), [newAmount]);
 
@@ -308,27 +383,32 @@ export function InteractivePreview() {
   const navItems: {
     id: PreviewTab;
     label: string;
+    shortcut: string;
     icon: React.ReactNode;
   }[] = [
     {
       id: "expenses",
-      label: "Daily Expenses (₹)",
-      icon: <IndianRupee className="h-4 w-4" aria-hidden="true" />,
+      label: "Daily Expenses",
+      shortcut: "g e",
+      icon: <IndianRupee className="h-3.5 w-3.5" aria-hidden="true" />,
     },
     {
       id: "inbox",
       label: "Inbox Triage",
-      icon: <Inbox className="h-4 w-4" aria-hidden="true" />,
+      shortcut: "g i",
+      icon: <Inbox className="h-3.5 w-3.5" aria-hidden="true" />,
     },
     {
       id: "habits",
       label: "Habit Heatmap",
-      icon: <Grid3X3 className="h-4 w-4" aria-hidden="true" />,
+      shortcut: "g h",
+      icon: <Grid3X3 className="h-3.5 w-3.5" aria-hidden="true" />,
     },
     {
       id: "command",
-      label: "⌘K Command Palette",
-      icon: <Command className="h-4 w-4" aria-hidden="true" />,
+      label: "Command Palette",
+      shortcut: "⌘K",
+      icon: <Command className="h-3.5 w-3.5" aria-hidden="true" />,
     },
   ];
 
@@ -336,61 +416,63 @@ export function InteractivePreview() {
     <section
       id="preview"
       aria-labelledby="preview-heading"
-      className="relative mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 sm:pb-32"
+      className="relative mx-auto max-w-6xl px-4 pb-28 pt-4 sm:px-6 sm:pb-36"
     >
       <h2 id="preview-heading" className="sr-only">
         Interactive ORBIT Workspace Preview
       </h2>
 
-      {/* Ambient Color Pools Behind the Glass Stage */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-12 -z-10 flex justify-center"
-      >
-        <div className="h-80 w-[680px] rounded-full bg-sky-500/15 blur-[130px]" />
-        <div className=" -ml-32 h-72 w-[480px] rounded-full bg-indigo-500/15 blur-[130px]" />
-      </div>
-
       <ScrollReveal>
-        {/* Top Specular Highlight Line */}
-        <div
-          aria-hidden="true"
-          className="mx-auto h-px w-2/3 bg-gradient-to-r from-transparent via-sky-400/60 to-transparent"
-        />
-
-        {/* Double-layered Frosted Glass Bezel with Travelling Border-Beam */}
-        <div className="border-beam rounded-2xl border border-white/[0.14] bg-gradient-to-b from-white/[0.1] to-white/[0.03] p-2 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.16),0_25px_100px_-20px_rgba(56,189,248,0.22)] backdrop-blur-2xl sm:p-3">
-          <div className="overflow-hidden rounded-xl border border-white/[0.12] bg-slate-950/85">
-            {/* App Window Titlebar with macOS Traffic Lights */}
-            <div className="flex items-center justify-between border-b border-white/[0.1] bg-slate-900/60 px-4 py-3">
+        {/* 1px Metallic Rim Light Frame */}
+        <div className="relative rounded-2xl bg-gradient-to-b from-white/25 via-white/10 to-white/5 p-[1px] shadow-[0_30px_100px_-20px_rgba(0,0,0,0.85)]">
+          <div className="overflow-hidden rounded-[15px] bg-[#0c101a]/95 backdrop-blur-2xl">
+            {/* App Window Titlebar */}
+            <div className="flex items-center justify-between border-b border-white/[0.08] bg-white/[0.02] px-4 py-2.5">
               <div className="flex items-center gap-2">
                 <span
-                  className="h-3 w-3 rounded-full bg-[#ff5f56] shadow-[0_0_8px_rgba(255,95,86,0.45)]"
+                  className="h-2.5 w-2.5 rounded-full bg-[#ff5f56]"
                   aria-hidden="true"
                 />
                 <span
-                  className="h-3 w-3 rounded-full bg-[#ffbd2e] shadow-[0_0_8px_rgba(255,189,46,0.45)]"
+                  className="h-2.5 w-2.5 rounded-full bg-[#ffbd2e]"
                   aria-hidden="true"
                 />
                 <span
-                  className="h-3 w-3 rounded-full bg-[#27c93f] shadow-[0_0_8px_rgba(39,201,63,0.45)]"
+                  className="h-2.5 w-2.5 rounded-full bg-[#27c93f]"
                   aria-hidden="true"
                 />
-                <span className="ml-3 font-mono text-xs text-slate-300">
-                  ORBIT Workspace
+                <span className="ml-3 font-mono text-[11px] text-slate-400">
+                  orbit — v1.0.0
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 font-mono text-[11px] text-slate-300">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]" />
-                <span>orbit.sqlite · WAL · 0.08ms</span>
+              <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                <span>WAL · 0.08ms</span>
               </div>
             </div>
 
             {/* OS Sidebar + Main Stage */}
-            <div className="grid md:grid-cols-[224px_1fr]">
-              {/* Left Glass Sidebar */}
-              <aside className="border-b border-white/[0.1] bg-slate-900/40 p-3 md:border-b-0 md:border-r">
+            <div className="grid md:grid-cols-[240px_1fr]">
+              {/* Left Native Sidebar */}
+              <aside className="border-b border-white/[0.08] bg-white/[0.015] p-3 md:border-b-0 md:border-r">
+                {/* Workspace Switcher Header */}
+                <div className="mb-3 flex items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-xs font-semibold text-slate-100">
+                      Prithvi&apos;s Local Vault
+                    </div>
+                    <div className="flex items-center gap-1.5 font-mono text-[10px] text-slate-400">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      <span>orbit.sqlite · WAL</span>
+                    </div>
+                  </div>
+                  <ChevronDown
+                    className="h-3.5 w-3.5 shrink-0 text-slate-500"
+                    aria-hidden="true"
+                  />
+                </div>
+
                 <div
                   role="tablist"
                   aria-label="ORBIT workspace modules"
@@ -405,73 +487,67 @@ export function InteractivePreview() {
                         role="tab"
                         aria-selected={selected}
                         onClick={() => setActiveTab(item.id)}
-                        className={`flex shrink-0 cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium transition-all ${
+                        className={`flex shrink-0 cursor-pointer items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors ${
                           selected
-                            ? "border border-sky-400/35 bg-gradient-to-r from-sky-500/20 to-indigo-500/10 text-white shadow-[0_0_20px_rgba(56,189,248,0.15)]"
-                            : "border border-transparent text-slate-400 hover:bg-white/[0.05] hover:text-slate-200"
+                            ? "border border-sky-400/30 bg-sky-400/10 text-slate-50"
+                            : "border border-transparent text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
                         }`}
                       >
-                        <span
-                          className={
-                            selected ? "text-sky-400" : "text-slate-400"
-                          }
-                        >
-                          {item.icon}
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={
+                              selected ? "text-sky-400" : "text-slate-500"
+                            }
+                          >
+                            {item.icon}
+                          </span>
+                          <span>{item.label}</span>
                         </span>
-                        <span>{item.label}</span>
+                        <kbd className="hidden font-mono text-[11px] text-slate-500 md:inline">
+                          {item.shortcut}
+                        </kbd>
                       </button>
                     );
                   })}
                 </div>
-
-                <div className="mt-6 hidden rounded-lg border border-white/[0.1] bg-slate-900/55 p-3 md:block">
-                  <div className="font-mono text-[10px] uppercase tracking-wider text-slate-400">
-                    Engine Status
-                  </div>
-                  <div className="mt-1.5 flex items-center gap-2 font-mono text-xs text-slate-200">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                    <span>0ms Local Vault</span>
-                  </div>
-                </div>
               </aside>
 
               {/* Main Interactive Stage */}
-              <div className="min-h-[420px] p-5 sm:p-7">
+              <div className="min-h-[430px] p-5 pb-10 sm:p-7 sm:pb-12">
                 {/* 1. Daily Expenses (₹) */}
                 {activeTab === "expenses" && (
-                  <div className="space-y-6">
-                    {/* 3 Glass Stat Cards */}
+                  <div className="space-y-5">
                     <div className="grid gap-4 sm:grid-cols-3">
-                      <div className="rounded-xl border border-white/[0.14] bg-slate-900/55 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]">
+                      <div className="rounded-xl border border-white/[0.09] bg-white/[0.03] p-4">
                         <div className="text-xs font-medium text-slate-400">
                           Monthly Spend ({paymentFilter})
                         </div>
-                        <div className="mt-1.5 font-mono text-2xl font-bold tracking-tight text-white">
+                        <div className="mt-1.5 font-mono text-2xl font-bold tracking-tight text-amber-300">
                           ₹{formatINR(totalPaise)}
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-white/[0.14] bg-slate-900/55 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]">
+                      <div className="rounded-xl border border-white/[0.09] bg-white/[0.03] p-4">
                         <div className="flex items-center justify-between text-xs font-medium text-slate-400">
                           <span>Budget Pacing</span>
                           <span className="font-mono text-sky-400">
                             {pacingPct}%
                           </span>
                         </div>
-                        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/[0.08]">
+                        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]">
                           <div
-                            className="h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-400 transition-all duration-300"
+                            className="h-full rounded-full bg-sky-400 transition-all duration-300"
                             style={{ width: `${pacingPct}%` }}
                           />
                         </div>
-                        <div className="mt-2 font-mono text-[11px] text-slate-400">
+                        <div className="mt-2 font-mono text-[11px] text-slate-500">
                           Cap: ₹{formatINR(monthlyBudgetPaise)}
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-white/[0.14] bg-slate-900/55 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]">
+                      <div className="rounded-xl border border-white/[0.09] bg-white/[0.03] p-4">
                         <div className="text-xs font-medium text-slate-400">
-                          Payment Mode Filter
+                          Payment Mode
                         </div>
                         <div
                           role="group"
@@ -487,10 +563,10 @@ export function InteractivePreview() {
                                 key={mode}
                                 type="button"
                                 onClick={() => setPaymentFilter(mode)}
-                                className={`cursor-pointer rounded-full border px-2.5 py-0.5 font-mono text-[11px] font-medium transition-colors ${
+                                className={`cursor-pointer rounded-md border px-2.5 py-0.5 font-mono text-[11px] font-medium transition-colors ${
                                   active
-                                    ? "border-sky-400/50 bg-sky-400/20 text-sky-200"
-                                    : "border-white/[0.14] bg-white/[0.05] text-slate-300 hover:bg-white/[0.1] hover:text-white"
+                                    ? "border-sky-400/40 bg-sky-400/15 text-sky-200"
+                                    : "border-white/[0.09] bg-white/[0.03] text-slate-400 hover:bg-white/[0.07] hover:text-slate-100"
                                 }`}
                               >
                                 {mode}
@@ -501,10 +577,10 @@ export function InteractivePreview() {
                       </div>
                     </div>
 
-                    {/* Clean 1-Line Quick-Add Expense Bar */}
+                    {/* Quick-Add Expense Bar */}
                     <form
                       onSubmit={handleAddExpense}
-                      className="flex flex-col gap-2 rounded-xl border border-white/[0.14] bg-slate-900/55 p-2.5 sm:flex-row sm:items-center"
+                      className="flex flex-col gap-2 rounded-xl border border-white/[0.09] bg-white/[0.025] p-2.5 sm:flex-row sm:items-center"
                     >
                       <input
                         type="text"
@@ -512,7 +588,7 @@ export function InteractivePreview() {
                         onChange={(e) => setNewTitle(e.target.value)}
                         placeholder="Expense title (e.g. Filter Coffee)"
                         aria-label="Expense title"
-                        className="flex-1 rounded-lg bg-white/[0.06] px-3 py-2 text-xs text-white placeholder-slate-400 outline-none focus:ring-1 focus:ring-sky-400/60"
+                        className="flex-1 rounded-lg bg-white/[0.04] px-3 py-2 text-xs text-slate-100 placeholder-slate-500 outline-none focus:ring-1 focus:ring-sky-400/60"
                       />
                       <input
                         type="number"
@@ -522,38 +598,38 @@ export function InteractivePreview() {
                         onChange={(e) => setNewAmount(e.target.value)}
                         placeholder="₹ Amount"
                         aria-label="Expense amount in rupees"
-                        className="w-full rounded-lg bg-white/[0.06] px-3 py-2 font-mono text-xs text-white placeholder-slate-400 outline-none focus:ring-1 focus:ring-sky-400/60 sm:w-28"
+                        className="w-full rounded-lg bg-white/[0.04] px-3 py-2 font-mono text-xs text-slate-100 placeholder-slate-500 outline-none focus:ring-1 focus:ring-sky-400/60 sm:w-28"
                       />
                       {previewPaise !== null && (
-                        <span className="shrink-0 rounded-md border border-white/[0.14] bg-white/[0.06] px-2.5 py-1.5 font-mono text-[11px] text-sky-300">
+                        <span className="shrink-0 rounded-md border border-amber-400/25 bg-amber-400/10 px-2.5 py-1.5 font-mono text-[11px] text-amber-300">
                           {previewPaise} paise
                         </span>
                       )}
                       <button
                         type="submit"
                         disabled={!newTitle.trim() || previewPaise === null}
-                        className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-slate-950 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-950 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                         <span>Add</span>
                       </button>
                     </form>
 
-                    {/* Spacious Transaction List */}
-                    <div className="divide-y divide-white/[0.08] rounded-xl border border-white/[0.14] bg-slate-900/40">
+                    {/* Transaction List */}
+                    <div className="divide-y divide-white/[0.06] rounded-xl border border-white/[0.09] bg-white/[0.02]">
                       {filteredExpenses.map((item) => (
                         <div
                           key={item.id}
-                          className="flex items-center justify-between gap-4 px-4 py-3.5"
+                          className="flex items-center justify-between gap-4 px-4 py-3"
                         >
                           <div className="min-w-0">
                             <div className="truncate text-sm font-medium text-slate-100">
                               {item.title}
                             </div>
-                            <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-400">
+                            <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
                               <span>{item.category}</span>
                               <span>·</span>
-                              <span className="font-mono text-slate-300">
+                              <span className="font-mono text-slate-400">
                                 {item.mode}
                               </span>
                               <span>·</span>
@@ -561,14 +637,14 @@ export function InteractivePreview() {
                             </div>
                           </div>
                           <div className="flex shrink-0 items-center gap-3">
-                            <span className="font-mono text-sm font-semibold text-white">
+                            <span className="font-mono text-sm font-semibold text-amber-300">
                               ₹{formatINR(item.paise)}
                             </span>
                             <button
                               type="button"
                               onClick={() => handleDeleteExpense(item)}
                               aria-label={`Delete ${item.title}`}
-                              className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-white/[0.08] hover:text-white"
+                              className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-slate-200"
                             >
                               <Trash2
                                 className="h-3.5 w-3.5"
@@ -587,17 +663,17 @@ export function InteractivePreview() {
                   <div className="space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
-                        <h3 className="text-sm font-semibold text-white">
+                        <h3 className="text-sm font-semibold text-slate-100">
                           Inbox Queue ({inboxItems.length} remaining)
                         </h3>
-                        <p className="text-xs text-slate-300">
+                        <p className="text-xs text-slate-400">
                           Route any captured thought in one click.
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={resetInbox}
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-white/[0.14] bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-slate-200 transition-colors hover:bg-white/[0.12] hover:text-white"
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/[0.09] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-white/[0.08] hover:text-white"
                       >
                         <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
                         <span>Reset Inbox</span>
@@ -607,7 +683,7 @@ export function InteractivePreview() {
                     {triageBanner && (
                       <div
                         role="status"
-                        className="flex items-center gap-2 rounded-xl border border-emerald-400/35 bg-emerald-400/15 px-4 py-2.5 text-xs font-medium text-emerald-200"
+                        className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2.5 text-xs font-medium text-emerald-300"
                       >
                         <CheckCircle2
                           className="h-4 w-4 shrink-0 text-emerald-400"
@@ -618,15 +694,15 @@ export function InteractivePreview() {
                     )}
 
                     {inboxItems.length === 0 ? (
-                      <div className="rounded-xl border border-white/[0.14] bg-slate-900/55 p-10 text-center">
+                      <div className="rounded-xl border border-white/[0.09] bg-white/[0.02] p-10 text-center">
                         <Sparkles
                           className="mx-auto mb-2.5 h-6 w-6 text-sky-400"
                           aria-hidden="true"
                         />
-                        <div className="text-sm font-semibold text-white">
+                        <div className="text-sm font-semibold text-slate-100">
                           Inbox Zero Achieved
                         </div>
-                        <p className="mt-1 text-xs text-slate-300">
+                        <p className="mt-1 text-xs text-slate-400">
                           Hit Reset Inbox above to replay the triage flow.
                         </p>
                       </div>
@@ -635,13 +711,13 @@ export function InteractivePreview() {
                         {inboxItems.map((item) => (
                           <div
                             key={item.id}
-                            className="flex flex-col justify-between gap-3 rounded-xl border border-white/[0.14] bg-slate-900/55 px-4 py-3.5 transition-colors hover:border-sky-400/35 hover:bg-slate-900/75 sm:flex-row sm:items-center"
+                            className="flex flex-col justify-between gap-3 rounded-xl border border-white/[0.09] bg-white/[0.025] px-4 py-3.5 transition-colors hover:border-white/[0.16] sm:flex-row sm:items-center"
                           >
                             <div>
                               <div className="text-sm font-medium text-slate-100">
                                 {item.text}
                               </div>
-                              <div className="mt-0.5 font-mono text-[11px] text-slate-400">
+                              <div className="mt-0.5 font-mono text-[11px] text-slate-500">
                                 {item.source}
                               </div>
                             </div>
@@ -652,7 +728,7 @@ export function InteractivePreview() {
                                     key={dest}
                                     type="button"
                                     onClick={() => handleTriage(item, dest)}
-                                    className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-white/[0.14] bg-white/[0.06] px-3 py-1 text-xs font-medium text-slate-200 transition-all hover:border-sky-400/40 hover:bg-sky-400/20 hover:text-sky-200"
+                                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-white/[0.09] bg-white/[0.04] px-2.5 py-1 text-xs font-medium text-slate-200 transition-colors hover:border-sky-400/40 hover:bg-sky-400/15 hover:text-sky-200"
                                   >
                                     <ArrowRight
                                       className="h-3 w-3"
@@ -675,36 +751,36 @@ export function InteractivePreview() {
                   <div className="space-y-6">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                       <div>
-                        <h3 className="text-sm font-semibold text-white">
+                        <h3 className="text-sm font-semibold text-slate-100">
                           Deep Work &amp; Reading — 12-Week Grid
                         </h3>
-                        <p className="text-xs text-slate-300">
+                        <p className="text-xs text-slate-400">
                           Click any cell to toggle completion. Yesterday&apos;s
                           streak stays intact if Today is open.
                         </p>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="rounded-xl border border-white/[0.14] bg-slate-900/55 px-4 py-2 text-center">
-                          <div className="text-[10px] uppercase tracking-wider text-slate-400">
+                        <div className="rounded-xl border border-white/[0.09] bg-white/[0.03] px-4 py-2 text-center">
+                          <div className="text-[10px] uppercase tracking-wider text-slate-500">
                             Streak
                           </div>
-                          <div className="font-mono text-xl font-bold text-sky-400">
+                          <div className="font-mono text-xl font-bold text-emerald-400">
                             {currentStreak}d
                           </div>
                         </div>
-                        <div className="rounded-xl border border-white/[0.14] bg-slate-900/55 px-4 py-2 text-center">
-                          <div className="text-[10px] uppercase tracking-wider text-slate-400">
+                        <div className="rounded-xl border border-white/[0.09] bg-white/[0.03] px-4 py-2 text-center">
+                          <div className="text-[10px] uppercase tracking-wider text-slate-500">
                             12-Wk Total
                           </div>
-                          <div className="font-mono text-xl font-bold text-white">
+                          <div className="font-mono text-xl font-bold text-slate-100">
                             {completedCount}/84
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="overflow-x-auto rounded-xl border border-white/[0.14] bg-slate-900/45 p-5">
+                    <div className="overflow-x-auto rounded-xl border border-white/[0.09] bg-white/[0.02] p-5">
                       <div
                         className="grid w-fit grid-flow-col grid-rows-7 gap-2"
                         role="grid"
@@ -719,10 +795,10 @@ export function InteractivePreview() {
                             aria-label={`Day ${idx + 1}: ${
                               done ? "Completed" : "Incomplete"
                             }`}
-                            className={`h-5 w-5 cursor-pointer rounded-[5px] border transition-all hover:scale-110 sm:h-6 sm:w-6 ${
+                            className={`h-5 w-5 cursor-pointer rounded-[4px] border transition-transform hover:scale-110 sm:h-6 sm:w-6 ${
                               done
-                                ? "border-sky-400/70 bg-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.45)]"
-                                : "border-white/[0.14] bg-white/[0.06] hover:bg-white/[0.12]"
+                                ? "border-emerald-400/60 bg-emerald-400/90 shadow-[0_0_10px_rgba(52,211,153,0.28)]"
+                                : "border-white/[0.09] bg-white/[0.04] hover:bg-white/[0.08]"
                             }`}
                           />
                         ))}
@@ -734,13 +810,14 @@ export function InteractivePreview() {
                 {/* 4. ⌘K Command Palette */}
                 {activeTab === "command" && (
                   <div className="flex min-h-[340px] items-center justify-center">
-                    <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/[0.18] bg-slate-900/85 shadow-2xl shadow-black/70 backdrop-blur-xl">
-                      <div className="flex items-center gap-2.5 border-b border-white/[0.12] px-4 py-3">
+                    <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/[0.12] bg-[#0e1320]/95 shadow-2xl shadow-black/75">
+                      <div className="flex items-center gap-2.5 border-b border-white/[0.08] px-4 py-3">
                         <Search
-                          className="h-4 w-4 shrink-0 text-slate-300"
+                          className="h-4 w-4 shrink-0 text-slate-400"
                           aria-hidden="true"
                         />
                         <input
+                          ref={cmdInputRef}
                           type="text"
                           value={cmdQuery}
                           onChange={(e) => setCmdQuery(e.target.value)}
@@ -755,16 +832,16 @@ export function InteractivePreview() {
                           }}
                           placeholder="Type a command or chord (e.g. 'expense', 'g h')..."
                           aria-label="Filter ORBIT commands"
-                          className="w-full bg-transparent text-sm text-white placeholder-slate-400 outline-none"
+                          className="w-full bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none"
                         />
-                        <kbd className="rounded border border-white/[0.16] bg-white/[0.08] px-1.5 py-0.5 font-mono text-[10px] text-slate-300">
+                        <kbd className="rounded border border-white/[0.12] bg-white/[0.05] px-1.5 py-0.5 font-mono text-[10px] text-slate-400">
                           ⌘K
                         </kbd>
                       </div>
 
-                      <div className="divide-y divide-white/[0.08]">
+                      <div className="divide-y divide-white/[0.06]">
                         {filteredCommands.length === 0 ? (
-                          <div className="px-4 py-6 text-center text-xs text-slate-400">
+                          <div className="px-4 py-6 text-center text-xs text-slate-500">
                             No matching commands.
                           </div>
                         ) : (
@@ -773,17 +850,17 @@ export function InteractivePreview() {
                               key={cmd.id}
                               type="button"
                               onClick={() => executeCommand(cmd)}
-                              className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-white/[0.08]"
+                              className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-white/[0.06]"
                             >
                               <div className="flex items-center gap-2.5">
-                                <kbd className="rounded border border-white/[0.14] bg-white/[0.06] px-1.5 py-0.5 font-mono text-[11px] font-semibold text-sky-400">
+                                <kbd className="rounded border border-white/[0.09] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[11px] font-semibold text-sky-400">
                                   {cmd.shortcut}
                                 </kbd>
                                 <span className="text-slate-100">
                                   {cmd.label}
                                 </span>
                               </div>
-                              <span className="font-mono text-[11px] text-slate-400">
+                              <span className="font-mono text-[11px] text-slate-500">
                                 {cmd.group}
                               </span>
                             </button>
@@ -796,9 +873,9 @@ export function InteractivePreview() {
               </div>
             </div>
 
-            {/* Ultra-Minimal 1-Line SQLite Query Ticker + Persistent Command Status */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.1] bg-slate-900/60 px-4 py-2.5 font-mono text-[11px]">
-              <div className="min-w-0 truncate text-slate-300">
+            {/* 1-Line SQLite Query Ticker + Persistent Command Status */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] bg-white/[0.02] px-4 py-2.5 font-mono text-[11px]">
+              <div className="min-w-0 truncate text-slate-400">
                 <span className="mr-2 text-sky-400">sqlite&gt;</span>
                 <span>{sqlLog}</span>
               </div>
@@ -806,6 +883,66 @@ export function InteractivePreview() {
                 <div role="status" className="shrink-0 text-emerald-400">
                   ✓ {cmdFeedback}
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* Overlapping Quick Keyboard Chord Bar */}
+          <div className="pointer-events-auto relative -mt-4 flex justify-center px-4">
+            <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-white/[0.12] bg-[#0e1422]/95 px-4 py-1.5 font-mono text-[11px] text-slate-300 shadow-xl shadow-black/70 backdrop-blur-xl">
+              {gArmed ? (
+                <span className="text-sky-300">
+                  Chord armed: press <kbd className="text-white">e</kbd>,{" "}
+                  <kbd className="text-white">i</kbd>, or{" "}
+                  <kbd className="text-white">h</kbd>
+                </span>
+              ) : (
+                <>
+                  <span className="text-slate-500">Press</span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("expenses")}
+                    className="cursor-pointer hover:text-white"
+                  >
+                    <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
+                      g+e
+                    </kbd>{" "}
+                    Expenses
+                  </button>
+                  <span className="text-slate-600">·</span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("inbox")}
+                    className="cursor-pointer hover:text-white"
+                  >
+                    <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
+                      g+i
+                    </kbd>{" "}
+                    Inbox
+                  </button>
+                  <span className="text-slate-600">·</span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("habits")}
+                    className="cursor-pointer hover:text-white"
+                  >
+                    <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
+                      g+h
+                    </kbd>{" "}
+                    Habits
+                  </button>
+                  <span className="text-slate-600">·</span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("command")}
+                    className="cursor-pointer hover:text-white"
+                  >
+                    <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
+                      ⌘K
+                    </kbd>{" "}
+                    Palette
+                  </button>
+                </>
               )}
             </div>
           </div>

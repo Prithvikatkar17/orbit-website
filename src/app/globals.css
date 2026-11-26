@@ -6,10 +6,22 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes border-beam-spin {
+  to {
+    --angle: 360deg;
+  }
+}
+
 html {
   scroll-behavior: smooth;
-  background-color: #050508;
-  color: #f4f4f5;
+  background-color: #090d16;
+  color: #f1f5f9;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -19,8 +31,15 @@ html {
 }
 
 body {
-  background-color: #050508;
-  color: #f4f4f5;
+  background-color: #090d16;
+  background-image: linear-gradient(
+    180deg,
+    #0d1322 0%,
+    #090d16 35%,
+    #0b101d 75%,
+    #070a12 100%
+  );
+  color: #f1f5f9;
   font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -42,11 +61,47 @@ pre,
 /* Perspective grid background for Hero */
 .hero-grid-mask {
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
   -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+/* Animated Travelling Border-Beam */
+.border-beam {
+  position: relative;
+}
+
+.border-beam::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--angle),
+    transparent 70%,
+    #38bdf8 85%,
+    #818cf8 95%,
+    #34d399 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: border-beam-spin 6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .border-beam::after {
+    animation: none;
+  }
 }
 
 /* Mouse-tracking spotlight card glow */
@@ -64,7 +119,7 @@ pre,
   border-radius: inherit;
   background: radial-gradient(
     420px circle at var(--mouse-x) var(--mouse-y),
-    rgba(56, 189, 248, 0.12),
+    rgba(56, 189, 248, 0.16),
     transparent 65%
   );
   opacity: 0;

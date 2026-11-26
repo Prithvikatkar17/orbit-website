@@ -5,11 +5,12 @@ import { InteractivePreview } from "@/components/interactive-preview";
 import { FeaturesOverview } from "@/components/features-overview";
 import { BentoArchitecture } from "@/components/bento-architecture";
 import { EditionCompare } from "@/components/edition-compare";
+import { FinalCta } from "@/components/final-cta";
 import { Footer } from "@/components/footer";
 
 export default function HomePage() {
   return (
-    <div className="flex min-h-screen flex-col bg-[#050508]">
+    <div className="flex min-h-screen flex-col">
       <Navbar />
       <main className="flex-1">
         <Hero />
@@ -17,6 +18,7 @@ export default function HomePage() {
         <FeaturesOverview />
         <BentoArchitecture />
         <EditionCompare />
+        <FinalCta />
       </main>
       <Footer />
     </div>

@@ -17,7 +17,7 @@ export default function RootLayout({
       <head>
         <meta name="color-scheme" content="dark" />
       </head>
-      <body className="min-h-screen bg-[#050508] text-zinc-100 antialiased selection:bg-sky-500/30 selection:text-sky-100">
+      <body className="min-h-screen bg-[#090d16] text-slate-100 antialiased selection:bg-sky-500/30 selection:text-sky-100">
         {children}
       </body>
     </html>

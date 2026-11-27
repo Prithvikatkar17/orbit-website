@@ -1,948 +1,473 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
+  BookOpen,
+  Calendar,
+  CheckSquare,
   IndianRupee,
   Inbox,
-  Grid3X3,
-  Command,
-  CheckCircle2,
-  RotateCcw,
-  ArrowRight,
-  Search,
-  Sparkles,
   Plus,
-  Trash2,
-  ChevronDown,
+  RotateCcw,
+  Sparkles,
+  Stars,
 } from "lucide-react";
 import { ScrollReveal } from "./scroll-reveal";
 
-type PreviewTab = "expenses" | "inbox" | "habits" | "command";
-type PaymentMode = "All" | "UPI" | "Cash" | "Card";
+type PaymentMode = "UPI" | "Cash" | "Card";
 
-interface ExpenseItem {
+interface SpendEntry {
   id: string;
-  title: string;
-  category: string;
-  mode: Exclude<PaymentMode, "All">;
+  label: string;
   paise: number;
-  time: string;
+  mode: PaymentMode;
 }
 
-const INITIAL_EXPENSES: ExpenseItem[] = [
-  {
-    id: "e1",
-    title: "Campus Mess & Filter Coffee",
-    category: "Food",
-    mode: "UPI",
-    paise: 18550,
-    time: "Today, 09:15",
-  },
-  {
-    id: "e2",
-    title: "Metro Smart Card Top-up",
-    category: "Travel",
-    mode: "UPI",
-    paise: 40000,
-    time: "Today, 08:30",
-  },
-  {
-    id: "e3",
-    title: "Hostel Wi-Fi & Electricity Share",
-    category: "Hostel/Bills",
-    mode: "Card",
-    paise: 54000,
-    time: "Yesterday",
-  },
-  {
-    id: "e4",
-    title: "Systems Design Printout & Spiral",
-    category: "Study",
-    mode: "Cash",
-    paise: 14500,
-    time: "Yesterday",
-  },
+interface ConstellationHabit {
+  id: string;
+  constellation: string;
+  name: string;
+  streak: number;
+  doneToday: boolean;
+}
+
+interface InboxThought {
+  id: string;
+  text: string;
+  triagedTo?: "Tasks" | "Calendar" | "Library";
+}
+
+const INITIAL_SPENDS: SpendEntry[] = [
+  { id: "s1", label: "Cutting Chai", paise: 4500, mode: "UPI" },
+  { id: "s2", label: "Metro Card", paise: 42000, mode: "Card" },
+  { id: "s3", label: "Technical Book", paise: 125000, mode: "UPI" },
+];
+
+const INITIAL_CONSTELLATIONS: ConstellationHabit[] = [
+  { id: "c1", constellation: "LYRA", name: "Zero Sugar & Hydration", streak: 12, doneToday: true },
+  { id: "c2", constellation: "ORION", name: "Deep Work (90m)", streak: 20, doneToday: false },
+  { id: "c3", constellation: "CASSIOPEIA", name: "Evening Reading", streak: 9, doneToday: false },
+];
+
+const INITIAL_INBOX: InboxThought[] = [
+  { id: "i1", text: "Review weekly ₹ expense ledger" },
+  { id: "i2", text: "Deep Work Sprint: Architecture" },
+  { id: "i3", text: "Chapter 4: Designing Data-Intensive Apps" },
+];
+
+const MODULE_CHORDS = [
+  { name: "Home", chord: "g d" },
+  { name: "Inbox", chord: "g i" },
+  { name: "Tasks", chord: "g t" },
+  { name: "Calendar", chord: "g c" },
+  { name: "Habits", chord: "g h" },
+  { name: "Expenses", chord: "g e" },
+  { name: "Library", chord: "g l" },
+  { name: "Insights", chord: "⌘ K" },
 ];
 
 function formatINR(paise: number): string {
-  return (paise / 100).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
+  const rupees = paise / 100;
+  const hasPaise = paise % 100 !== 0;
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: hasPaise ? 2 : 0,
     maximumFractionDigits: 2,
-  });
-}
-
-function parseRupeesToPaise(raw: string): number | null {
-  const cleaned = raw.trim();
-  if (!cleaned) return null;
-  const num = Number(cleaned);
-  if (!Number.isFinite(num) || num <= 0) return null;
-  return Math.round(num * 100);
-}
-
-interface InboxItem {
-  id: string;
-  text: string;
-  source: string;
-}
-
-const INITIAL_INBOX: InboxItem[] = [
-  {
-    id: "i1",
-    text: "Submit DBMS assignment PDF before 11:59 PM",
-    source: "Quick Capture",
-  },
-  {
-    id: "i2",
-    text: "Dentist follow-up next Tuesday at 4:30 PM",
-    source: "Voice Note",
-  },
-  {
-    id: "i3",
-    text: "Read SQLite WAL mode internals & pragma benchmarks",
-    source: "Web Clip",
-  },
-  {
-    id: "i4",
-    text: "Split ₹540 hostel Wi-Fi bill with Aarav",
-    source: "Quick Capture",
-  },
-];
-
-const INITIAL_HABIT_GRID: boolean[] = Array.from({ length: 84 }, (_, idx) => {
-  if (idx >= 77) return true;
-  return (idx * 7 + (idx % 5)) % 3 !== 0;
-});
-
-interface PaletteCommand {
-  id: string;
-  shortcut: string;
-  label: string;
-  group: string;
-  targetTab?: PreviewTab;
-}
-
-const PALETTE_COMMANDS: PaletteCommand[] = [
-  {
-    id: "c1",
-    shortcut: ">",
-    label: "Log Expense (₹ INR)",
-    group: "Actions",
-    targetTab: "expenses",
-  },
-  {
-    id: "c2",
-    shortcut: ">",
-    label: "New Task",
-    group: "Actions",
-    targetTab: "inbox",
-  },
-  {
-    id: "c3",
-    shortcut: "g e",
-    label: "Go to Expenses",
-    group: "Navigation",
-    targetTab: "expenses",
-  },
-  {
-    id: "c4",
-    shortcut: "g h",
-    label: "Go to Habits",
-    group: "Navigation",
-    targetTab: "habits",
-  },
-  {
-    id: "c5",
-    shortcut: "g i",
-    label: "Go to Inbox Triage",
-    group: "Navigation",
-    targetTab: "inbox",
-  },
-  {
-    id: "c6",
-    shortcut: ">",
-    label: "Export .sqlite Snapshot",
-    group: "Vault",
-  },
-];
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  const tag = target.tagName;
-  return (
-    tag === "INPUT" ||
-    tag === "TEXTAREA" ||
-    tag === "SELECT" ||
-    target.isContentEditable
-  );
+  }).format(rupees);
 }
 
 export function InteractivePreview() {
-  const [activeTab, setActiveTab] = useState<PreviewTab>("expenses");
-  const cmdInputRef = useRef<HTMLInputElement | null>(null);
-  const gTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [gArmed, setGArmed] = useState(false);
+  const [spends, setSpends] = useState<SpendEntry[]>(INITIAL_SPENDS);
+  const [spendLabel, setSpendLabel] = useState("");
+  const [spendAmount, setSpendAmount] = useState("");
+  const [spendMode, setSpendMode] = useState<PaymentMode>("UPI");
 
-  const [expenses, setExpenses] = useState<ExpenseItem[]>(INITIAL_EXPENSES);
-  const [paymentFilter, setPaymentFilter] = useState<PaymentMode>("All");
-  const [newTitle, setNewTitle] = useState("Filter Coffee");
-  const [newAmount, setNewAmount] = useState("45.50");
+  const [habits, setHabits] = useState<ConstellationHabit[]>(INITIAL_CONSTELLATIONS);
+  const [inbox, setInbox] = useState<InboxThought[]>(INITIAL_INBOX);
 
-  const [inboxItems, setInboxItems] = useState<InboxItem[]>(INITIAL_INBOX);
-  const [triageBanner, setTriageBanner] = useState<string | null>(null);
-
-  const [habitCells, setHabitCells] = useState<boolean[]>(INITIAL_HABIT_GRID);
-
-  const [cmdQuery, setCmdQuery] = useState("");
-  const [cmdFeedback, setCmdFeedback] = useState<string | null>(null);
-
-  const [sqlLog, setSqlLog] = useState(
-    "SELECT id, title, paise, mode FROM expenses ORDER BY created_at DESC LIMIT 4; -- 0.08ms (WAL)"
+  const monthlyBudgetPaise = 1500000; // ₹15,000
+  const baseMonthPaise = 142000; // ₹1,420 earlier in month
+  const totalMonthPaise = useMemo(
+    () => baseMonthPaise + spends.reduce((acc, s) => acc + s.paise, 0),
+    [spends]
   );
-
-  // Physical keyboard chord listener for g+e, g+i, g+h, ⌘K
-  useEffect(() => {
-    const clearArmed = () => {
-      setGArmed(false);
-      if (gTimerRef.current) {
-        clearTimeout(gTimerRef.current);
-        gTimerRef.current = null;
-      }
-    };
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        clearArmed();
-        setActiveTab("command");
-        setCmdFeedback("Focused ⌘K Palette (0.1ms)");
-        requestAnimationFrame(() => cmdInputRef.current?.focus());
-        return;
-      }
-
-      if (isEditableTarget(e.target)) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-
-      const key = e.key.toLowerCase();
-
-      if (gArmed) {
-        clearArmed();
-        if (key === "e") {
-          e.preventDefault();
-          setActiveTab("expenses");
-          setCmdFeedback("Chord [g → e] · Daily Expenses (0.1ms)");
-        } else if (key === "i") {
-          e.preventDefault();
-          setActiveTab("inbox");
-          setCmdFeedback("Chord [g → i] · Inbox Triage (0.1ms)");
-        } else if (key === "h") {
-          e.preventDefault();
-          setActiveTab("habits");
-          setCmdFeedback("Chord [g → h] · Habit Heatmap (0.1ms)");
-        }
-        return;
-      }
-
-      if (key === "g") {
-        setGArmed(true);
-        if (gTimerRef.current) clearTimeout(gTimerRef.current);
-        gTimerRef.current = setTimeout(() => {
-          setGArmed(false);
-          gTimerRef.current = null;
-        }, 800);
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      if (gTimerRef.current) clearTimeout(gTimerRef.current);
-    };
-  }, [gArmed]);
-
-  const previewPaise = useMemo(() => parseRupeesToPaise(newAmount), [newAmount]);
-
-  const filteredExpenses = useMemo(() => {
-    if (paymentFilter === "All") return expenses;
-    return expenses.filter((e) => e.mode === paymentFilter);
-  }, [expenses, paymentFilter]);
-
-  const totalPaise = useMemo(
-    () => filteredExpenses.reduce((sum, item) => sum + item.paise, 0),
-    [filteredExpenses]
-  );
-
-  const monthlyBudgetPaise = 500000;
-  const pacingPct = Math.min(
+  const budgetPercent = Math.min(
     100,
-    Math.round((totalPaise / monthlyBudgetPaise) * 100)
+    Math.round((totalMonthPaise / monthlyBudgetPaise) * 100)
   );
 
-  const handleAddExpense = (e: React.FormEvent) => {
+  function addSpend(label: string, rupees: number, mode: PaymentMode) {
+    const paise = Math.round(rupees * 100);
+    if (!label.trim() || paise <= 0) return;
+    setSpends((prev) => [
+      { id: `${Date.now()}`, label: label.trim(), paise, mode },
+      ...prev.slice(0, 3),
+    ]);
+  }
+
+  function handleCustomSpendSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const title = newTitle.trim();
-    if (!title || !previewPaise) return;
-    const mode: Exclude<PaymentMode, "All"> =
-      paymentFilter === "All" ? "UPI" : paymentFilter;
-    const item: ExpenseItem = {
-      id: `e-${Date.now()}`,
-      title,
-      category: "Quick Add",
-      mode,
-      paise: previewPaise,
-      time: "Just now",
-    };
-    setExpenses((prev) => [item, ...prev]);
-    const safeTitle = title.replace(/'/g, "''");
-    setSqlLog(
-      `INSERT INTO expenses (title, paise, mode) VALUES ('${safeTitle}', ${previewPaise}, '${mode}'); -- 0.08ms (WAL)`
+    const num = parseFloat(spendAmount);
+    if (!spendLabel.trim() || Number.isNaN(num) || num <= 0) return;
+    addSpend(spendLabel, num, spendMode);
+    setSpendLabel("");
+    setSpendAmount("");
+  }
+
+  function toggleConstellation(id: string) {
+    setHabits((prev) =>
+      prev.map((h) =>
+        h.id === id
+          ? {
+              ...h,
+              doneToday: !h.doneToday,
+              streak: h.doneToday ? Math.max(0, h.streak - 1) : h.streak + 1,
+            }
+          : h
+      )
     );
-    setCmdFeedback(
-      `Logged "${title}" (₹${formatINR(previewPaise)} · ${previewPaise} paise)`
+  }
+
+  function triageItem(id: string, target: "Tasks" | "Calendar" | "Library") {
+    setInbox((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, triagedTo: target } : item
+      )
     );
-    setNewTitle("");
-    setNewAmount("");
-  };
+  }
 
-  const handleDeleteExpense = (item: ExpenseItem) => {
-    setExpenses((prev) => prev.filter((e) => e.id !== item.id));
-    setSqlLog(`DELETE FROM expenses WHERE id = '${item.id}'; -- 0.05ms (WAL)`);
-  };
+  function resetSandbox() {
+    setSpends(INITIAL_SPENDS);
+    setHabits(INITIAL_CONSTELLATIONS);
+    setInbox(INITIAL_INBOX);
+    setSpendLabel("");
+    setSpendAmount("");
+  }
 
-  const handleTriage = (item: InboxItem, destination: string) => {
-    setInboxItems((prev) => prev.filter((i) => i.id !== item.id));
-    setTriageBanner(`Moved "${item.text}" → ${destination}`);
-    setSqlLog(
-      `UPDATE inbox SET status = 'triaged', target = '${destination.toLowerCase()}' WHERE id = '${item.id}'; -- 0.06ms (WAL)`
-    );
-  };
-
-  const resetInbox = () => {
-    setInboxItems(INITIAL_INBOX);
-    setTriageBanner(null);
-    setSqlLog(
-      "SELECT id, text, source FROM inbox WHERE status = 'open'; -- 0.04ms (WAL)"
-    );
-  };
-
-  const toggleHabitCell = (index: number) => {
-    const nextVal = !habitCells[index];
-    setHabitCells((prev) => {
-      const next = [...prev];
-      next[index] = nextVal;
-      return next;
-    });
-    setSqlLog(
-      `UPDATE habits SET completed = ${nextVal ? 1 : 0} WHERE day_idx = ${index}; -- 0.05ms (WAL)`
-    );
-  };
-
-  const currentStreak = useMemo(() => {
-    const lastIdx = habitCells.length - 1;
-    let startIdx = lastIdx;
-    if (!habitCells[lastIdx]) {
-      if (lastIdx > 0 && habitCells[lastIdx - 1]) {
-        startIdx = lastIdx - 1;
-      } else {
-        return 0;
-      }
-    }
-    let streak = 0;
-    for (let i = startIdx; i >= 0; i--) {
-      if (habitCells[i]) streak++;
-      else break;
-    }
-    return streak;
-  }, [habitCells]);
-
-  const completedCount = useMemo(
-    () => habitCells.filter(Boolean).length,
-    [habitCells]
-  );
-
-  const filteredCommands = useMemo(() => {
-    const q = cmdQuery.trim().toLowerCase();
-    if (!q) return PALETTE_COMMANDS;
-    return PALETTE_COMMANDS.filter(
-      (c) =>
-        c.label.toLowerCase().includes(q) ||
-        c.shortcut.toLowerCase().includes(q) ||
-        c.group.toLowerCase().includes(q)
-    );
-  }, [cmdQuery]);
-
-  const executeCommand = (cmd: PaletteCommand) => {
-    setCmdFeedback(`Executed: ${cmd.label} (0.12ms)`);
-    setSqlLog(
-      `PRAGMA quick_check; -- Command '${cmd.label}' dispatched in 0.12ms (WAL)`
-    );
-    if (cmd.targetTab) {
-      setActiveTab(cmd.targetTab);
-    }
-  };
-
-  const navItems: {
-    id: PreviewTab;
-    label: string;
-    shortcut: string;
-    icon: React.ReactNode;
-  }[] = [
-    {
-      id: "expenses",
-      label: "Daily Expenses",
-      shortcut: "g e",
-      icon: <IndianRupee className="h-3.5 w-3.5" aria-hidden="true" />,
-    },
-    {
-      id: "inbox",
-      label: "Inbox Triage",
-      shortcut: "g i",
-      icon: <Inbox className="h-3.5 w-3.5" aria-hidden="true" />,
-    },
-    {
-      id: "habits",
-      label: "Habit Heatmap",
-      shortcut: "g h",
-      icon: <Grid3X3 className="h-3.5 w-3.5" aria-hidden="true" />,
-    },
-    {
-      id: "command",
-      label: "Command Palette",
-      shortcut: "⌘K",
-      icon: <Command className="h-3.5 w-3.5" aria-hidden="true" />,
-    },
-  ];
+  const completedHabitsCount = habits.filter((h) => h.doneToday).length;
 
   return (
     <section
-      id="preview"
-      aria-labelledby="preview-heading"
-      className="relative mx-auto max-w-6xl scroll-mt-28 px-4 pb-28 pt-4 sm:px-6 sm:pb-36"
+      id="sandbox"
+      aria-labelledby="sandbox-heading"
+      className="mx-auto max-w-6xl scroll-mt-24 px-4 py-14 sm:px-6 sm:py-20"
     >
-      <h2 id="preview-heading" className="sr-only">
-        Interactive ORBIT Workspace Preview
-      </h2>
-
       <ScrollReveal>
-        {/* 1px Metallic Rim Light Frame */}
-        <div className="relative rounded-2xl bg-gradient-to-b from-white/25 via-white/10 to-white/5 p-[1px] shadow-[0_30px_100px_-20px_rgba(0,0,0,0.85)]">
-          <div className="overflow-hidden rounded-[15px] bg-[#0c101a]/95 backdrop-blur-2xl">
-            {/* App Window Titlebar */}
-            <div className="flex items-center justify-between border-b border-white/[0.08] bg-white/[0.02] px-4 py-2.5">
-              <div className="flex items-center gap-2">
-                <span
-                  className="h-2.5 w-2.5 rounded-full bg-[#ff5f56]"
-                  aria-hidden="true"
-                />
-                <span
-                  className="h-2.5 w-2.5 rounded-full bg-[#ffbd2e]"
-                  aria-hidden="true"
-                />
-                <span
-                  className="h-2.5 w-2.5 rounded-full bg-[#27c93f]"
-                  aria-hidden="true"
-                />
-                <span className="ml-3 font-mono text-[11px] text-slate-400">
-                  orbit — v1.0.0
+        <div className="mb-8 flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3.5 py-1 text-xs font-medium text-stone-700 shadow-xs dark:border-stone-800 dark:bg-stone-900 dark:text-stone-200">
+              <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+              <span>Interactive Live Sandbox</span>
+            </div>
+            <h2
+              id="sandbox-heading"
+              className="mt-3 font-serif text-2xl font-medium tracking-tight text-stone-900 sm:text-4xl dark:text-stone-50"
+            >
+              Try the 0ms Local Engine Live
+            </h2>
+            <p className="mt-1.5 text-sm text-stone-600 dark:text-stone-300">
+              Zero network roundtrips—test ORBIT&apos;s integer-paise expense
+              ledger, Star Constellation habits, and 1-click Inbox triage right
+              here.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={resetSandbox}
+            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-stone-200 bg-white px-4 text-xs font-medium text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer shrink-0 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span>Reset Sandbox</span>
+          </button>
+        </div>
+      </ScrollReveal>
+
+      {/* 3-Card Live Engine Workbench */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Widget 1: ₹ INR Expense Engine */}
+        <ScrollReveal delayMs={0}>
+          <div
+            className="flex h-full flex-col justify-between rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900"
+            style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
+          >
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-stone-200 pb-3 dark:border-stone-800">
+                <div className="flex items-center gap-2">
+                  <IndianRupee className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+                  <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
+                    ₹ INR Expense Pacing
+                  </h3>
+                </div>
+                <span className="font-mono text-xs font-semibold text-stone-900 dark:text-stone-100">
+                  {formatINR(totalMonthPaise)} / ₹15,000
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                <span>WAL · 0.08ms</span>
-              </div>
-            </div>
-
-            {/* OS Sidebar + Main Stage */}
-            <div className="grid md:grid-cols-[240px_1fr]">
-              {/* Left Native Sidebar */}
-              <aside className="border-b border-white/[0.08] bg-white/[0.015] p-3 md:border-b-0 md:border-r">
-                {/* Workspace Switcher Header */}
-                <div className="mb-3 flex items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2">
-                  <div className="min-w-0">
-                    <div className="truncate text-xs font-semibold text-slate-100">
-                      Prithvi&apos;s Local Vault
-                    </div>
-                    <div className="flex items-center gap-1.5 font-mono text-[10px] text-slate-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                      <span>orbit.sqlite · WAL</span>
-                    </div>
-                  </div>
-                  <ChevronDown
-                    className="h-3.5 w-3.5 shrink-0 text-slate-500"
-                    aria-hidden="true"
+              {/* Monthly Allowance Bar */}
+              <div className="space-y-1.5">
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-stone-100 border border-stone-200 dark:bg-stone-950 dark:border-stone-800">
+                  <div
+                    className="h-full bg-emerald-700 transition-all duration-300 dark:bg-emerald-500"
+                    style={{ width: `${budgetPercent}%` }}
                   />
                 </div>
-
-                <div
-                  role="tablist"
-                  aria-label="ORBIT workspace modules"
-                  className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 md:flex md:flex-col"
-                >
-                  {navItems.map((item) => {
-                    const selected = activeTab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        role="tab"
-                        aria-selected={selected}
-                        onClick={() => setActiveTab(item.id)}
-                        className={`flex min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors ${
-                          selected
-                            ? "border border-sky-400/30 bg-sky-400/10 text-slate-50"
-                            : "border border-transparent text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
-                        }`}
-                      >
-                        <span className="flex min-w-0 items-center gap-2">
-                          <span
-                            className={`shrink-0 ${
-                              selected ? "text-sky-400" : "text-slate-500"
-                            }`}
-                          >
-                            {item.icon}
-                          </span>
-                          <span className="truncate">{item.label}</span>
-                        </span>
-                        <kbd className="hidden shrink-0 font-mono text-[11px] text-slate-500 md:inline">
-                          {item.shortcut}
-                        </kbd>
-                      </button>
-                    );
-                  })}
+                <div className="flex justify-between text-[11px] text-stone-500 dark:text-stone-400">
+                  <span>{budgetPercent}% of monthly allowance</span>
+                  <span>0ms integer paise</span>
                 </div>
-              </aside>
-
-              {/* Main Interactive Stage */}
-              <div className="min-h-[420px] min-w-0 p-4 sm:p-6">
-                {/* 1. Daily Expenses (₹) */}
-                {activeTab === "expenses" && (
-                  <div className="space-y-5">
-                    <div className="grid gap-4 sm:grid-cols-3">
-                      <div className="rounded-xl border border-white/[0.09] bg-white/[0.03] p-4">
-                        <div className="text-xs font-medium text-slate-400">
-                          Monthly Spend ({paymentFilter})
-                        </div>
-                        <div className="mt-1.5 font-mono text-2xl font-bold tracking-tight text-amber-300">
-                          ₹{formatINR(totalPaise)}
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border border-white/[0.09] bg-white/[0.03] p-4">
-                        <div className="flex items-center justify-between text-xs font-medium text-slate-400">
-                          <span>Budget Pacing</span>
-                          <span className="font-mono text-sky-400">
-                            {pacingPct}%
-                          </span>
-                        </div>
-                        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]">
-                          <div
-                            className="h-full rounded-full bg-sky-400 transition-all duration-300"
-                            style={{ width: `${pacingPct}%` }}
-                          />
-                        </div>
-                        <div className="mt-2 font-mono text-[11px] text-slate-500">
-                          Cap: ₹{formatINR(monthlyBudgetPaise)}
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border border-white/[0.09] bg-white/[0.03] p-4">
-                        <div className="text-xs font-medium text-slate-400">
-                          Payment Mode
-                        </div>
-                        <div
-                          role="group"
-                          aria-label="Filter by payment mode"
-                          className="mt-2.5 flex flex-wrap gap-1.5"
-                        >
-                          {(
-                            ["All", "UPI", "Cash", "Card"] as PaymentMode[]
-                          ).map((mode) => {
-                            const active = paymentFilter === mode;
-                            return (
-                              <button
-                                key={mode}
-                                type="button"
-                                onClick={() => setPaymentFilter(mode)}
-                                className={`cursor-pointer rounded-md border px-2.5 py-0.5 font-mono text-[11px] font-medium transition-colors ${
-                                  active
-                                    ? "border-sky-400/40 bg-sky-400/15 text-sky-200"
-                                    : "border-white/[0.09] bg-white/[0.03] text-slate-400 hover:bg-white/[0.07] hover:text-slate-100"
-                                }`}
-                              >
-                                {mode}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Quick-Add Expense Bar */}
-                    <form
-                      onSubmit={handleAddExpense}
-                      className="flex flex-col gap-2 rounded-xl border border-white/[0.09] bg-white/[0.025] p-2.5 sm:flex-row sm:flex-wrap sm:items-center"
-                    >
-                      <input
-                        type="text"
-                        value={newTitle}
-                        onChange={(e) => setNewTitle(e.target.value)}
-                        placeholder="Expense title (e.g. Filter Coffee)"
-                        aria-label="Expense title"
-                        className="min-w-0 flex-1 rounded-lg bg-white/[0.04] px-3 py-2 text-xs text-slate-100 placeholder-slate-500 outline-none focus:ring-1 focus:ring-sky-400/60"
-                      />
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        value={newAmount}
-                        onChange={(e) => setNewAmount(e.target.value)}
-                        placeholder="₹ Amount"
-                        aria-label="Expense amount in rupees"
-                        className="w-full min-w-0 rounded-lg bg-white/[0.04] px-3 py-2 font-mono text-xs text-slate-100 placeholder-slate-500 outline-none focus:ring-1 focus:ring-sky-400/60 sm:w-28"
-                      />
-                      {previewPaise !== null && (
-                        <span className="shrink-0 rounded-md border border-amber-400/25 bg-amber-400/10 px-2.5 py-1.5 font-mono text-[11px] text-amber-300">
-                          {previewPaise} paise
-                        </span>
-                      )}
-                      <button
-                        type="submit"
-                        disabled={!newTitle.trim() || previewPaise === null}
-                        className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-950 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                        <span>Add</span>
-                      </button>
-                    </form>
-
-                    {/* Transaction List */}
-                    <div className="divide-y divide-white/[0.06] rounded-xl border border-white/[0.09] bg-white/[0.02]">
-                      {filteredExpenses.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center justify-between gap-4 px-4 py-3"
-                        >
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-medium text-slate-100">
-                              {item.title}
-                            </div>
-                            <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
-                              <span>{item.category}</span>
-                              <span>·</span>
-                              <span className="font-mono text-slate-400">
-                                {item.mode}
-                              </span>
-                              <span>·</span>
-                              <span>{item.time}</span>
-                            </div>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-3">
-                            <span className="font-mono text-sm font-semibold text-amber-300">
-                              ₹{formatINR(item.paise)}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteExpense(item)}
-                              aria-label={`Delete ${item.title}`}
-                              className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-white/[0.06] hover:text-slate-200"
-                            >
-                              <Trash2
-                                className="h-3.5 w-3.5"
-                                aria-hidden="true"
-                              />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 2. Inbox Triage */}
-                {activeTab === "inbox" && (
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <h3 className="text-sm font-semibold text-slate-100">
-                          Inbox Queue ({inboxItems.length} remaining)
-                        </h3>
-                        <p className="text-xs text-slate-400">
-                          Route any captured thought in one click.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={resetInbox}
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/[0.09] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-white/[0.08] hover:text-white"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                        <span>Reset Inbox</span>
-                      </button>
-                    </div>
-
-                    {triageBanner && (
-                      <div
-                        role="status"
-                        className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2.5 text-xs font-medium text-emerald-300"
-                      >
-                        <CheckCircle2
-                          className="h-4 w-4 shrink-0 text-emerald-400"
-                          aria-hidden="true"
-                        />
-                        <span>{triageBanner}</span>
-                      </div>
-                    )}
-
-                    {inboxItems.length === 0 ? (
-                      <div className="rounded-xl border border-white/[0.09] bg-white/[0.02] p-10 text-center">
-                        <Sparkles
-                          className="mx-auto mb-2.5 h-6 w-6 text-sky-400"
-                          aria-hidden="true"
-                        />
-                        <div className="text-sm font-semibold text-slate-100">
-                          Inbox Zero Achieved
-                        </div>
-                        <p className="mt-1 text-xs text-slate-400">
-                          Hit Reset Inbox above to replay the triage flow.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2.5">
-                        {inboxItems.map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex flex-col justify-between gap-3 rounded-xl border border-white/[0.09] bg-white/[0.025] px-4 py-3.5 transition-colors hover:border-white/[0.16] sm:flex-row sm:items-center"
-                          >
-                            <div>
-                              <div className="text-sm font-medium text-slate-100">
-                                {item.text}
-                              </div>
-                              <div className="mt-0.5 font-mono text-[11px] text-slate-500">
-                                {item.source}
-                              </div>
-                            </div>
-                            <div className="flex shrink-0 flex-wrap gap-1.5">
-                              {(["Task", "Calendar", "Library"] as const).map(
-                                (dest) => (
-                                  <button
-                                    key={dest}
-                                    type="button"
-                                    onClick={() => handleTriage(item, dest)}
-                                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-white/[0.09] bg-white/[0.04] px-2.5 py-1 text-xs font-medium text-slate-200 transition-colors hover:border-sky-400/40 hover:bg-sky-400/15 hover:text-sky-200"
-                                  >
-                                    <ArrowRight
-                                      className="h-3 w-3"
-                                      aria-hidden="true"
-                                    />
-                                    <span>{dest}</span>
-                                  </button>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 3. Habit Heatmap */}
-                {activeTab === "habits" && (
-                  <div className="space-y-6">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                      <div>
-                        <h3 className="text-sm font-semibold text-slate-100">
-                          Deep Work &amp; Reading — 12-Week Grid
-                        </h3>
-                        <p className="text-xs text-slate-400">
-                          Click any cell to toggle completion. Yesterday&apos;s
-                          streak stays intact if Today is open.
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="rounded-xl border border-white/[0.09] bg-white/[0.03] px-4 py-2 text-center">
-                          <div className="text-[10px] uppercase tracking-wider text-slate-500">
-                            Streak
-                          </div>
-                          <div className="font-mono text-xl font-bold text-emerald-400">
-                            {currentStreak}d
-                          </div>
-                        </div>
-                        <div className="rounded-xl border border-white/[0.09] bg-white/[0.03] px-4 py-2 text-center">
-                          <div className="text-[10px] uppercase tracking-wider text-slate-500">
-                            12-Wk Total
-                          </div>
-                          <div className="font-mono text-xl font-bold text-slate-100">
-                            {completedCount}/84
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="overflow-x-auto rounded-xl border border-white/[0.09] bg-white/[0.02] p-5">
-                      <div
-                        className="grid w-fit grid-flow-col grid-rows-7 gap-2"
-                        role="grid"
-                        aria-label="12-week habit completion grid"
-                      >
-                        {habitCells.map((done, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => toggleHabitCell(idx)}
-                            aria-pressed={done}
-                            aria-label={`Day ${idx + 1}: ${
-                              done ? "Completed" : "Incomplete"
-                            }`}
-                            className={`h-5 w-5 cursor-pointer rounded-[4px] border transition-transform hover:scale-110 sm:h-6 sm:w-6 ${
-                              done
-                                ? "border-emerald-400/60 bg-emerald-400/90 shadow-[0_0_10px_rgba(52,211,153,0.28)]"
-                                : "border-white/[0.09] bg-white/[0.04] hover:bg-white/[0.08]"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* 4. ⌘K Command Palette */}
-                {activeTab === "command" && (
-                  <div className="flex min-h-[340px] items-center justify-center">
-                    <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/[0.12] bg-[#0e1320]/95 shadow-2xl shadow-black/75">
-                      <div className="flex items-center gap-2.5 border-b border-white/[0.08] px-4 py-3">
-                        <Search
-                          className="h-4 w-4 shrink-0 text-slate-400"
-                          aria-hidden="true"
-                        />
-                        <input
-                          ref={cmdInputRef}
-                          type="text"
-                          value={cmdQuery}
-                          onChange={(e) => setCmdQuery(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (
-                              e.key === "Enter" &&
-                              filteredCommands.length > 0
-                            ) {
-                              e.preventDefault();
-                              executeCommand(filteredCommands[0]);
-                            }
-                          }}
-                          placeholder="Type a command or chord (e.g. 'expense', 'g h')..."
-                          aria-label="Filter ORBIT commands"
-                          className="w-full bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none"
-                        />
-                        <kbd className="rounded border border-white/[0.12] bg-white/[0.05] px-1.5 py-0.5 font-mono text-[10px] text-slate-400">
-                          ⌘K
-                        </kbd>
-                      </div>
-
-                      <div className="divide-y divide-white/[0.06]">
-                        {filteredCommands.length === 0 ? (
-                          <div className="px-4 py-6 text-center text-xs text-slate-500">
-                            No matching commands.
-                          </div>
-                        ) : (
-                          filteredCommands.map((cmd) => (
-                            <button
-                              key={cmd.id}
-                              type="button"
-                              onClick={() => executeCommand(cmd)}
-                              className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-white/[0.06]"
-                            >
-                              <div className="flex items-center gap-2.5">
-                                <kbd className="rounded border border-white/[0.09] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[11px] font-semibold text-sky-400">
-                                  {cmd.shortcut}
-                                </kbd>
-                                <span className="text-slate-100">
-                                  {cmd.label}
-                                </span>
-                              </div>
-                              <span className="font-mono text-[11px] text-slate-500">
-                                {cmd.group}
-                              </span>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
+
+              {/* 1-Tap Preset Chips */}
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: "Chai", rupees: 45, mode: "UPI" as const },
+                  { label: "Metro", rupees: 60, mode: "Card" as const },
+                  { label: "Groceries", rupees: 320, mode: "UPI" as const },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => addSpend(preset.label, preset.rupees, preset.mode)}
+                    className="inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-2.5 text-xs font-medium text-stone-700 hover:bg-stone-100 cursor-pointer dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200 dark:hover:bg-stone-800"
+                  >
+                    <Plus className="h-3 w-3 text-amber-600" />
+                    <span>{preset.label}</span>
+                    <span className="font-mono text-[11px] text-stone-500">
+                      ₹{preset.rupees}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Quick Form */}
+              <form onSubmit={handleCustomSpendSubmit} className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={spendLabel}
+                  onChange={(e) => setSpendLabel(e.target.value)}
+                  placeholder="Item (e.g. Lunch)"
+                  className="min-w-0 flex-1 rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-1.5 text-xs text-stone-900 placeholder:text-stone-400 focus:border-amber-600 focus:outline-none dark:border-stone-800 dark:bg-stone-950 dark:text-stone-100"
+                />
+                <input
+                  type="number"
+                  min="1"
+                  step="any"
+                  value={spendAmount}
+                  onChange={(e) => setSpendAmount(e.target.value)}
+                  placeholder="₹"
+                  className="w-16 rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-xs font-mono text-stone-900 placeholder:text-stone-400 focus:border-amber-600 focus:outline-none dark:border-stone-800 dark:bg-stone-950 dark:text-stone-100"
+                />
+                <select
+                  aria-label="Payment mode"
+                  value={spendMode}
+                  onChange={(e) => setSpendMode(e.target.value as PaymentMode)}
+                  className="rounded-lg border border-stone-200 bg-stone-50 px-1.5 py-1.5 text-[11px] font-semibold text-stone-700 focus:outline-none dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200"
+                >
+                  <option value="UPI">UPI</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Card">Card</option>
+                </select>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-stone-900 px-3 py-1.5 text-xs font-semibold text-stone-50 hover:bg-stone-800 cursor-pointer dark:bg-stone-100 dark:text-stone-900"
+                >
+                  Log
+                </button>
+              </form>
             </div>
 
-            {/* Unified Non-Overlapping Desktop Status Dock */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] bg-[#070a12]/90 px-4 py-2.5 font-mono text-[11px]">
-              {/* Left: Live sqlite> WAL query ticker + command feedback */}
-              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
-                <div className="min-w-0 truncate text-slate-400">
-                  <span className="mr-2 text-sky-400">sqlite&gt;</span>
-                  <span>{sqlLog}</span>
-                </div>
-                {cmdFeedback && (
-                  <div role="status" className="shrink-0 text-emerald-400">
-                    ✓ {cmdFeedback}
+            {/* Latest 3 Entries */}
+            <div className="mt-4 space-y-1.5 border-t border-stone-200 pt-3 dark:border-stone-800">
+              {spends.slice(0, 3).map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between text-xs"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="truncate font-medium text-stone-800 dark:text-stone-200">
+                      {s.label}
+                    </span>
+                    <span className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[9px] font-bold text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+                      {s.mode}
+                    </span>
                   </div>
-                )}
-              </div>
-
-              {/* Right: Interactive clickable keyboard chord buttons */}
-              <div className="flex flex-wrap items-center gap-2 text-slate-400">
-                {gArmed ? (
-                  <span className="text-sky-300">
-                    Chord armed: press <kbd className="text-white">e</kbd>,{" "}
-                    <kbd className="text-white">i</kbd>, or{" "}
-                    <kbd className="text-white">h</kbd>
+                  <span className="font-mono font-semibold text-stone-900 dark:text-stone-100 shrink-0">
+                    {formatINR(s.paise)}
                   </span>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("expenses")}
-                      className="inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-white/[0.06] hover:text-white"
-                    >
-                      <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
-                        g+e
-                      </kbd>
-                      <span>Expenses</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("inbox")}
-                      className="inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-white/[0.06] hover:text-white"
-                    >
-                      <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
-                        g+i
-                      </kbd>
-                      <span>Inbox</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("habits")}
-                      className="inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-white/[0.06] hover:text-white"
-                    >
-                      <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
-                        g+h
-                      </kbd>
-                      <span>Habits</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("command")}
-                      className="inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-white/[0.06] hover:text-white"
-                    >
-                      <kbd className="rounded bg-white/[0.07] px-1.5 py-0.5 text-sky-300">
-                        ⌘K
-                      </kbd>
-                      <span>Palette</span>
-                    </button>
-                  </>
-                )}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
+        </ScrollReveal>
+
+        {/* Widget 2: Living Star Constellation Habits */}
+        <ScrollReveal delayMs={60}>
+          <div
+            className="flex h-full flex-col justify-between rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900"
+            style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
+          >
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-stone-200 pb-3 dark:border-stone-800">
+                <div className="flex items-center gap-2">
+                  <Stars className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                  <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
+                    Living Star Constellations
+                  </h3>
+                </div>
+                <span className="rounded-full bg-indigo-500/15 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
+                  {completedHabitsCount}/{habits.length} Aligned
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                {habits.map((h) => (
+                  <div
+                    key={h.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-stone-200 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-950"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-mono text-[10px] font-semibold tracking-wider text-indigo-600 dark:text-indigo-400">
+                        {h.constellation} · {h.streak} NIGHTS
+                      </div>
+                      <div className="truncate text-xs font-semibold text-stone-900 dark:text-stone-100">
+                        {h.name}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => toggleConstellation(h.id)}
+                      aria-pressed={h.doneToday}
+                      aria-label={`Toggle ${h.name}`}
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer ${
+                        h.doneToday
+                          ? "border-indigo-500 bg-indigo-600 text-white shadow-sm"
+                          : "border-stone-300 bg-white text-stone-600 hover:border-indigo-400 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+                      }`}
+                    >
+                      <Plus
+                        className={`h-4 w-4 transition-transform ${
+                          h.doneToday ? "rotate-45" : ""
+                        }`}
+                      />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="mt-4 border-t border-stone-200 pt-3 text-[11px] text-stone-500 dark:border-stone-800 dark:text-stone-400">
+              In Midnight Observatory, habits light up Lyra, Orion &amp;
+              Cassiopeia nodes; in Conservatory, they fill 180-day heatmaps.
+            </p>
+          </div>
+        </ScrollReveal>
+
+        {/* Widget 3: One-Click Inbox Triage */}
+        <ScrollReveal delayMs={120}>
+          <div
+            className="flex h-full flex-col justify-between rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900"
+            style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
+          >
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-stone-200 pb-3 dark:border-stone-800">
+                <div className="flex items-center gap-2">
+                  <Inbox className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
+                  <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
+                    1-Click Inbox Triage
+                  </h3>
+                </div>
+                <span className="font-mono text-[11px] text-stone-500 dark:text-stone-400">
+                  {inbox.filter((i) => !i.triagedTo).length} pending
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                {inbox.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-xl border border-stone-200 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-950"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`text-xs font-medium ${
+                          item.triagedTo
+                            ? "text-stone-400 line-through"
+                            : "text-stone-800 dark:text-stone-100"
+                        }`}
+                      >
+                        {item.text}
+                      </span>
+                      {item.triagedTo && (
+                        <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                          → {item.triagedTo}
+                        </span>
+                      )}
+                    </div>
+
+                    {!item.triagedTo && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => triageItem(item.id, "Tasks")}
+                          className="inline-flex items-center gap-1 rounded-md border border-stone-200 bg-white px-2 py-1 text-[11px] font-medium text-stone-700 hover:bg-stone-100 cursor-pointer dark:border-stone-800 dark:bg-stone-900 dark:text-stone-200"
+                        >
+                          <CheckSquare className="h-3 w-3 text-amber-600" />
+                          <span>Tasks</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => triageItem(item.id, "Calendar")}
+                          className="inline-flex items-center gap-1 rounded-md border border-stone-200 bg-white px-2 py-1 text-[11px] font-medium text-stone-700 hover:bg-stone-100 cursor-pointer dark:border-stone-800 dark:bg-stone-900 dark:text-stone-200"
+                        >
+                          <Calendar className="h-3 w-3 text-indigo-600" />
+                          <span>Calendar</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => triageItem(item.id, "Library")}
+                          className="inline-flex items-center gap-1 rounded-md border border-stone-200 bg-white px-2 py-1 text-[11px] font-medium text-stone-700 hover:bg-stone-100 cursor-pointer dark:border-stone-800 dark:bg-stone-900 dark:text-stone-200"
+                        >
+                          <BookOpen className="h-3 w-3 text-emerald-600" />
+                          <span>Library</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="mt-4 border-t border-stone-200 pt-3 text-[11px] text-stone-500 dark:border-stone-800 dark:text-stone-400">
+              Every triage writes optimistically to IndexedDB in 0ms and queues
+              SQLite sync in the background.
+            </p>
+          </div>
+        </ScrollReveal>
+      </div>
+
+      {/* Real Sidebar Modules & Navigation Chords Reference Strip */}
+      <ScrollReveal delayMs={160}>
+        <div
+          className="mt-6 flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-3 dark:border-stone-800 dark:bg-stone-900"
+          style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
+        >
+          <span className="mr-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+            Real Modules &amp; Chords:
+          </span>
+          {MODULE_CHORDS.map((mod) => (
+            <span
+              key={mod.name}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-1 text-xs text-stone-700 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-200"
+            >
+              <span className="font-medium">{mod.name}</span>
+              <kbd className="rounded bg-stone-200/80 px-1.5 py-0.5 font-mono text-[10px] font-bold text-stone-800 dark:bg-stone-800 dark:text-amber-300">
+                {mod.chord}
+              </kbd>
+            </span>
+          ))}
         </div>
       </ScrollReveal>
     </section>

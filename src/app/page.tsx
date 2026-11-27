@@ -1,6 +1,7 @@
 import React from "react";
 import { Navbar } from "@/components/navbar";
 import { Hero } from "@/components/hero";
+import { ScreenshotGallery } from "@/components/screenshot-gallery";
 import { InteractivePreview } from "@/components/interactive-preview";
 import { FeaturesOverview } from "@/components/features-overview";
 import { BentoArchitecture } from "@/components/bento-architecture";
@@ -14,6 +15,7 @@ export default function HomePage() {
       <Navbar />
       <main className="flex-1">
         <Hero />
+        <ScreenshotGallery />
         <InteractivePreview />
         <FeaturesOverview />
         <BentoArchitecture />

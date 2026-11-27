@@ -1,19 +1,30 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
+
 @theme inline {
-  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-serif: var(--font-instrument), ui-serif, Georgia, Cambria, serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, Cambria, serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 :root {
+  color-scheme: light;
+}
+
+:root[data-mode="dark"] {
   color-scheme: dark;
 }
 
 html {
   scroll-behavior: smooth;
-  background-color: #080b12;
-  color: #f8fafc;
+  background-color: #faf8f5;
+  color: #1c1917;
+}
+
+html[data-mode="dark"] {
+  background-color: #141312;
+  color: #f5f5f4;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -23,70 +34,53 @@ html {
 }
 
 body {
-  background-color: #080b12;
-  background-image: radial-gradient(
-    ellipse 80% 50% at 50% -10%,
-    rgba(56, 189, 248, 0.08),
-    transparent 70%
-  );
-  color: #f8fafc;
   font-family: var(--font-sans);
-  line-height: 1.6;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
-/* Subtle tactile film-grain noise overlay */
-.film-grain {
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  opacity: 0.025;
-}
-
 :focus-visible {
-  outline: 2px solid #38bdf8;
+  outline: 2px solid #d97706;
   outline-offset: 2px;
 }
 
-/* Perspective grid background for Hero */
-.hero-grid-mask {
-  background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse at center, black 25%, transparent 72%);
-  -webkit-mask-image: radial-gradient(ellipse at center, black 25%, transparent 72%);
+/* Tactile Daylight Frosted Glass Card */
+.tactile-glass {
+  background-color: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 24px 60px -15px rgba(28, 25, 23, 0.07),
+    0 4px 12px -2px rgba(28, 25, 23, 0.04),
+    inset 0 2px 0 0 rgba(255, 255, 255, 0.95);
 }
 
-/* Bottom fade mask for visual-first bento mini-canvases */
-.bento-canvas-fade {
-  mask-image: linear-gradient(to bottom, black 68%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 68%, transparent 100%);
+[data-mode="dark"] .tactile-glass {
+  background-color: rgba(28, 25, 23, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 24px 60px -15px rgba(0, 0, 0, 0.45),
+    0 4px 12px -2px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
 }
 
-/* Mouse-tracking spotlight card glow */
-.spotlight-card {
-  position: relative;
-  --mouse-x: 50%;
-  --mouse-y: 50%;
+/* Tactile Raised Pill Button */
+.tactile-pill {
+  background-color: #ffffff;
+  border: 1px solid rgba(214, 211, 209, 0.85);
+  box-shadow:
+    0 2px 8px rgba(28, 25, 23, 0.08),
+    inset 0 1px 0 #ffffff;
 }
 
-.spotlight-card::before {
-  content: "";
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(
-    380px circle at var(--mouse-x) var(--mouse-y),
-    rgba(56, 189, 248, 0.11),
-    transparent 65%
-  );
-  opacity: 0;
-  transition: opacity 0.25s ease;
-}
-
-.spotlight-card:hover::before {
-  opacity: 1;
+[data-mode="dark"] .tactile-pill {
+  background-color: rgba(41, 37, 36, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 /* Native accessible accordion (<details> / <summary>) */
@@ -127,8 +121,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .orbit-accordion .accordion-chevron,
-  .spotlight-card::before {
+  .orbit-accordion .accordion-chevron {
     transition: none;
   }
 }

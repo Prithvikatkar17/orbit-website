@@ -1,31 +1,67 @@
 "use client";
 
-import React, { useState } from "react";
-import { ArrowUpRight, Menu, X } from "lucide-react";
-import { APP_URL, APP_VERSION } from "@/lib/config";
+import React, { useState, useSyncExternalStore } from "react";
+import { Sun, Moon, ArrowUpRight, Menu, X } from "lucide-react";
+import { APP_URL } from "@/lib/config";
 
 const NAV_LINKS = [
-  { href: "#preview", label: "Workspace" },
-  { href: "#features", label: "Modules" },
-  { href: "#architecture", label: "Architecture" },
-  { href: "#editions", label: "Editions" },
+  { href: "#sanctuary", label: "Daily Flow" },
+  { href: "#why-local", label: "Why Local" },
+  { href: "#download", label: "Download" },
 ];
+
+const MODE_EVENT = "orbit-daylight-mode-change";
+
+function getModeSnapshot(): "light" | "dark" {
+  try {
+    return localStorage.getItem("orbit-daylight-mode") === "dark"
+      ? "dark"
+      : "light";
+  } catch {
+    return "light";
+  }
+}
+
+function subscribeMode(cb: () => void): () => void {
+  window.addEventListener(MODE_EVENT, cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    window.removeEventListener(MODE_EVENT, cb);
+    window.removeEventListener("storage", cb);
+  };
+}
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const mode = useSyncExternalStore<"light" | "dark">(
+    subscribeMode,
+    getModeSnapshot,
+    () => "light"
+  );
+
+  const toggleMode = () => {
+    const next = mode === "dark" ? "light" : "dark";
+    document.documentElement.dataset.mode = next;
+    try {
+      localStorage.setItem("orbit-daylight-mode", next);
+    } catch {
+      // ignore
+    }
+    window.dispatchEvent(new Event(MODE_EVENT));
+  };
 
   return (
-    <header className="fixed inset-x-0 top-5 z-50 mx-auto w-[calc(100%-2rem)] max-w-3xl">
-      <div className="flex items-center justify-between gap-4 rounded-full border border-white/[0.09] bg-zinc-950/70 px-5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_20px_50px_-15px_rgba(0,0,0,0.8)] backdrop-blur-xl">
-        {/* Left: ORBIT mark + wordmark + version */}
+    <header className="fixed inset-x-0 top-5 z-50 mx-auto w-[calc(100%-2rem)] max-w-4xl">
+      <div className="flex items-center justify-between gap-4 rounded-full border border-white/90 bg-white/75 px-6 py-3 shadow-[0_12px_32px_rgba(28,25,23,0.06)] backdrop-blur-2xl dark:border-white/10 dark:bg-stone-900/75 dark:shadow-[0_12px_32px_rgba(0,0,0,0.45)]">
+        {/* Left: Warm ORBIT emblem + wordmark */}
         <a
           href="#"
-          className="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-slate-50"
+          className="flex items-center gap-2.5 text-stone-900 dark:text-stone-100"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.12] bg-white/[0.05]">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200/80 bg-white shadow-sm dark:border-white/10 dark:bg-stone-800">
             <svg
-              width="17"
-              height="17"
+              width="18"
+              height="18"
               viewBox="0 0 28 28"
               fill="none"
               aria-hidden="true"
@@ -36,44 +72,60 @@ export function Navbar() {
                 rx="9.5"
                 ry="4.5"
                 transform="rotate(-30 14 14)"
-                stroke="rgba(248,250,252,0.75)"
+                stroke="currentColor"
+                strokeOpacity="0.45"
                 strokeWidth="1.6"
               />
-              <circle cx="14" cy="14" r="3" fill="#38bdf8" />
-              <circle cx="21" cy="9.8" r="1.4" fill="#f8fafc" />
+              <circle cx="14" cy="14" r="3.2" fill="#D97706" />
+              <circle cx="21" cy="9.8" r="1.5" fill="#059669" />
             </svg>
           </span>
-          <span className="text-sm font-bold tracking-tight text-slate-50">
+          <span className="font-serif text-lg font-semibold tracking-tight">
             ORBIT
-          </span>
-          <span className="rounded-full border border-white/[0.09] bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] font-medium text-slate-400">
-            {APP_VERSION}
           </span>
         </a>
 
-        {/* Center: Clean Nav Links */}
-        <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
+        {/* Center: 3 Friendly Links */}
+        <nav aria-label="Primary" className="hidden items-center gap-2 md:flex">
           {NAV_LINKS.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="rounded-full px-3 py-1 text-xs font-medium text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-slate-100"
+              className="rounded-full px-4 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-900/5 hover:text-stone-900 dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white"
             >
               {link.label}
             </a>
           ))}
         </nav>
 
-        {/* Right: Pill CTA + Mobile toggle */}
-        <div className="flex items-center gap-2">
+        {/* Right: Day/Night Toggle Pill + Open My Journal CTA */}
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={toggleMode}
+            aria-label={
+              mode === "dark" ? "Switch to Daylight mode" : "Switch to Cozy Night mode"
+            }
+            title={
+              mode === "dark" ? "Switch to Daylight mode" : "Switch to Cozy Night mode"
+            }
+            className="tactile-pill inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-stone-700 transition-transform hover:scale-105 dark:text-stone-200"
+          >
+            {mode === "dark" ? (
+              <Sun className="h-4 w-4 text-amber-400" aria-hidden="true" />
+            ) : (
+              <Moon className="h-4 w-4 text-stone-700" aria-hidden="true" />
+            )}
+          </button>
+
           <a
             href={APP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden items-center gap-1.5 rounded-full border border-white/[0.14] bg-white/[0.08] px-3.5 py-1.5 text-xs font-semibold text-slate-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all hover:border-sky-400/40 hover:bg-white/[0.13] sm:inline-flex"
+            className="hidden items-center gap-1.5 rounded-full bg-stone-900 px-4 py-2 text-xs font-semibold text-stone-50 shadow-[0_6px_16px_rgba(28,25,23,0.2)] transition-all hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white sm:inline-flex"
           >
-            <span>Launch Web App</span>
-            <ArrowUpRight className="h-3.5 w-3.5 text-sky-400" aria-hidden="true" />
+            <span>Open My Journal</span>
+            <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
           </a>
 
           <button
@@ -84,7 +136,7 @@ export function Navbar() {
             aria-label={
               mobileOpen ? "Close navigation menu" : "Open navigation menu"
             }
-            className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/[0.09] bg-white/[0.05] text-slate-200 transition-colors hover:bg-white/[0.1] md:hidden"
+            className="tactile-pill inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-stone-700 md:hidden dark:text-stone-200"
           >
             {mobileOpen ? (
               <X className="h-4 w-4" aria-hidden="true" />
@@ -95,11 +147,12 @@ export function Navbar() {
         </div>
       </div>
 
+      {/* Mobile Frosted Drawer */}
       {mobileOpen && (
         <nav
           id="mobile-nav-menu"
           aria-label="Mobile"
-          className="mt-2 rounded-2xl border border-white/[0.09] bg-zinc-950/90 p-3 shadow-2xl shadow-black/80 backdrop-blur-xl md:hidden"
+          className="tactile-glass mt-2.5 rounded-3xl p-4 md:hidden"
         >
           <ul className="flex flex-col gap-1">
             {NAV_LINKS.map((link) => (
@@ -107,7 +160,7 @@ export function Navbar() {
                 <a
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
-                  className="block rounded-xl px-3.5 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/[0.06] hover:text-white"
+                  className="block rounded-2xl px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-900/5 dark:text-stone-200 dark:hover:bg-white/10"
                 >
                   {link.label}
                 </a>
@@ -118,10 +171,10 @@ export function Navbar() {
                 href={APP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-1.5 rounded-full border border-white/[0.14] bg-white/[0.09] px-4 py-2 text-xs font-semibold text-white"
+                className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-stone-900 px-4 py-3 text-sm font-semibold text-stone-50 dark:bg-stone-100 dark:text-stone-900"
               >
-                <span>Launch Web App</span>
-                <ArrowUpRight className="h-3.5 w-3.5 text-sky-400" aria-hidden="true" />
+                <span>Open My Journal</span>
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
               </a>
             </li>
           </ul>

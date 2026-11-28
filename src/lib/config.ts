@@ -1,5 +1,5 @@
 export const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL || "https://orbit-app.pages.dev";
+  process.env.NEXT_PUBLIC_APP_URL || "https://orbit-app-2fa.pages.dev";
 
 export const RELEASES_URL =
   process.env.NEXT_PUBLIC_RELEASES_URL ||
